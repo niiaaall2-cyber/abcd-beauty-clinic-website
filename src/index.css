@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Poppins", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-display: "DM Serif Display", serif;
+  
+  --color-lavender-50: #F5F0FF;
+  --color-lavender-100: #EDE5FF;
+  --color-lavender-200: #D8C8FF;
+  --color-lavender-300: #BC9EFF;
+  --color-lavender-400: #9D6EFF;
+  --color-lavender-500: #8045F5;
+  --color-lavender-600: #6B28E8;
+  --color-lavender-700: #5518C8;
+  --color-purple-deep: #2D1B69;
+  --color-purple-darker: #1A0F3F;
+  --color-purple-ink: #0E0820;
+}
+
+@layer base {
+  body {
+    @apply bg-[#F8F5FF] text-[#2D1B69] antialiased selection:bg-lavender-200 selection:text-purple-ink;
+    font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+  }
+}
+
+.apple-glass {
+  @apply bg-white/70 backdrop-blur-xl border border-white/20;
+}
+
+.apple-text-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-b from-purple-deep to-lavender-600;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-lavender-200 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-lavender-300;
+}
+
+/* Modal specific animation */
+.modal-overlay {
+  background: rgba(14, 8, 32, 0.4);
+  backdrop-filter: blur(8px);
+}
