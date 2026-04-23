@@ -32,12 +32,12 @@ import { db, auth, googleProvider } from './lib/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
 
-import logoOfficial from './assets/logo_v2.png';
-import hero1 from './assets/h1_v2.png';
-import hero2 from './assets/h2_v2.png';
-import hero3 from './assets/h3_v2.png';
-
 // --- Constants & Types ---
+
+const logoOfficial = "/logo_final.png";
+const hero1 = "/hero_final_1.png";
+const hero2 = "/hero_final_2.png";
+const hero3 = "/hero_final_3.png";
 
 const ADMIN_EMAILS = ['niiaaall2@gmail.com'];
 
