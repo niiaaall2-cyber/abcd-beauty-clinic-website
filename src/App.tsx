@@ -32,6 +32,11 @@ import { db, auth, googleProvider } from './lib/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
 
+import logoOfficial from './logo-official.png';
+import hero1 from './hero1.png';
+import hero2 from './hero2.png';
+import hero3 from './hero3.png';
+
 // --- Constants & Types ---
 
 const ADMIN_EMAILS = ['niiaaall2@gmail.com'];
@@ -317,7 +322,7 @@ const Logo = ({ className = "", inverted = false }: { className?: string; invert
   return (
     <div className={`flex items-center ${className}`}>
       <img 
-        src="/logo-official.png" 
+        src={logoOfficial} 
         alt="ABCD Beauty Clinic" 
         className={`h-16 md:h-28 w-auto object-contain transition-all duration-300 ${inverted ? 'brightness-0 invert' : ''}`}
         referrerPolicy="no-referrer"
@@ -474,10 +479,10 @@ const Hero = () => {
         >
           <div className="relative z-10 p-4 bg-white/5 border border-white/10 rounded-[40px] backdrop-blur-3xl overflow-hidden shadow-2xl">
              <div className="grid grid-cols-2 gap-4 mb-4">
-                <img src="/hero1.png" className="rounded-3xl h-48 w-full object-cover" alt="Service" />
-                <img src="/hero2.png" className="rounded-3xl h-48 w-full object-cover" alt="Service" />
+                <img src={hero1} className="rounded-3xl h-48 w-full object-cover" alt="Service" />
+                <img src={hero2} className="rounded-3xl h-48 w-full object-cover" alt="Service" />
              </div>
-             <img src="/hero3.png" className="rounded-3xl h-64 w-full object-cover" alt="Salon" />
+             <img src={hero3} className="rounded-3xl h-64 w-full object-cover" alt="Salon" />
           </div>
           <div className="absolute -top-10 -right-10 w-24 h-24 bg-lavender-500 rounded-full blur-3xl opacity-50" />
           <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-600 rounded-full blur-3xl opacity-30" />
@@ -793,7 +798,7 @@ const FindUs = () => {
   );
 };
 
-const Footer = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
+const Footer = ({ onOpenAdmin, onOpenPrivacy, onOpenTerms }: { onOpenAdmin: () => void, onOpenPrivacy: () => void, onOpenTerms: () => void }) => {
   const [clickCount, setClickCount] = useState(0);
   
   const handleSecretClick = () => {
@@ -857,8 +862,8 @@ const Footer = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
             © 2026 ABCD Beauty Clinic. All Professional Care.
           </p>
           <div className="flex gap-10">
-            <a href="#" className="text-xs uppercase tracking-widest text-white/20 hover:text-white transition-colors">Privacy</a>
-            <a href="#" className="text-xs uppercase tracking-widest text-white/20 hover:text-white transition-colors">Terms</a>
+            <button onClick={onOpenPrivacy} className="text-xs uppercase tracking-widest text-white/20 hover:text-white transition-colors">Privacy</button>
+            <button onClick={onOpenTerms} className="text-xs uppercase tracking-widest text-white/20 hover:text-white transition-colors">Terms</button>
           </div>
         </div>
       </div>
@@ -1220,8 +1225,85 @@ const WhatsAppFloatingButton = () => {
   );
 };
 
+const LegalOverlay = ({ isOpen, onClose, type }: { isOpen: boolean, onClose: () => void, type: 'privacy' | 'terms' }) => {
+  if (!isOpen) return null;
+
+  const content = type === 'privacy' ? {
+    title: "Privacy Policy",
+    sections: [
+      {
+        title: "Information Collection",
+        text: "We collect only the most essential information needed to provide our services. This includes your name and phone number when you request a booking."
+      },
+      {
+        title: "How We Use Your Data",
+        text: "Your contact details are used exclusively for scheduling and confirming your appointments at ABCD Beauty Clinic. We do not sell or trade your data with any third parties."
+      },
+      {
+        title: "Security",
+        text: "We implement industry-standard security measures to protect your personal information from unauthorized access or disclosure."
+      }
+    ]
+  } : {
+    title: "Terms of Service",
+    sections: [
+      {
+        title: "Booking Policy",
+        text: "Appointments are subject to availability. We recommend booking in advance to secure your preferred time slot."
+      },
+      {
+        title: "Cancellation Policy",
+        text: "We value your time and ours. If you need to cancel or reschedule, please inform us at least 2 hours before your appointment to avoid potential service fees."
+      },
+      {
+        title: "Health & Safety",
+        text: "Please inform us of any medical conditions or allergies prior to your treatment. ABCD Beauty Clinic is not liable for reactions if information was withheld."
+      }
+    ]
+  };
+
+  return (
+    <AnimatePresence>
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[110] bg-white/95 backdrop-blur-xl overflow-y-auto"
+      >
+        <div className="max-w-3xl mx-auto px-6 py-24">
+          <button 
+            onClick={onClose}
+            className="flex items-center gap-2 text-lavender-600 mb-12 font-bold hover:translate-x-[-4px] transition-transform"
+          >
+            <ChevronLeft size={20} />
+            Close
+          </button>
+
+          <h2 className="text-5xl font-bold text-purple-deep mb-16 tracking-tight">{content.title}</h2>
+          
+          <div className="space-y-16">
+            {content.sections.map((section, idx) => (
+              <div key={idx}>
+                <h3 className="text-xl font-bold text-purple-ink mb-4">{section.title}</h3>
+                <p className="text-gray-500 leading-relaxed text-lg font-light">
+                  {section.text}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-24 pt-12 border-t border-gray-100 italic text-gray-400 text-sm">
+            Last updated: April 2026. ABCD Beauty Clinic Reserve all rights.
+          </div>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
 export default function App() {
   const [adminOpen, setAdminOpen] = useState(false);
+  const [legalOpen, setLegalOpen] = useState<{ open: boolean, type: 'privacy' | 'terms' }>({ open: false, type: 'privacy' });
 
   return (
     <div className="selection:bg-lavender-100 selection:text-lavender-900">
@@ -1292,8 +1374,17 @@ export default function App() {
           </div>
         </section>
       </main>
-      <Footer onOpenAdmin={() => setAdminOpen(true)} />
+      <Footer 
+        onOpenAdmin={() => setAdminOpen(true)} 
+        onOpenPrivacy={() => setLegalOpen({ open: true, type: 'privacy' })}
+        onOpenTerms={() => setLegalOpen({ open: true, type: 'terms' })}
+      />
       <AdminSection isOpen={adminOpen} onClose={() => setAdminOpen(false)} />
+      <LegalOverlay 
+        isOpen={legalOpen.open} 
+        onClose={() => setLegalOpen({ ...legalOpen, open: false })} 
+        type={legalOpen.type} 
+      />
       <WhatsAppFloatingButton />
     </div>
   );
