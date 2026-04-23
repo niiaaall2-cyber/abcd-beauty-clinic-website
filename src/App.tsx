@@ -35,9 +35,9 @@ import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/aut
 // --- Constants & Types ---
 
 const logoOfficial = "/logo.png";
-const hero1 = "/hero1.png";
-const hero2 = "/hero2.png";
-const hero3 = "/hero3.png";
+const hero1 = "/images/hero1.png";
+const hero2 = "/images/hero2.png";
+const hero3 = "/images/hero3.png";
 
 const ADMIN_EMAILS = ['niiaaall2@gmail.com'];
 
