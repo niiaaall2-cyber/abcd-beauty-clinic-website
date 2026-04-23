@@ -22,118 +22,253 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  CheckCircle2
+  CheckCircle2,
+  Lock,
+  Calendar,
+  LogOut,
+  Trash2
 } from 'lucide-react';
+import { db, auth, googleProvider } from './lib/firebase';
+import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
 
 // --- Constants & Types ---
+
+const ADMIN_EMAILS = ['niiaaall2@gmail.com'];
 
 const NAVIGATION = [
   { name: 'About', href: '#about' },
   { name: 'Services', href: '#services' },
   { name: 'Reviews', href: '#testimonials' },
-  { name: 'Gallery', href: '#gallery' },
   { name: 'Find Us', href: '#findus' },
 ];
 
 const SERVICES = [
   {
-    id: 'haircut',
-    title: 'Haircut & Styling',
-    description: 'Precision cuts shaped to your face, finished with expert styling for the look you\'ve always wanted.',
-    details: 'Our specialists analyze your hair texture, face shape, and lifestyle to recommend the perfect cut. Whether it\'s a classic trim, a bold new bob, or intricate layering, we ensure you leave with a look that turns heads.',
+    id: 'hair-ladies',
+    title: 'Hair Services (Ladies)',
+    description: 'From precision cuts to high-fashion colors and restorative treatments.',
     icon: Scissors,
     image: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=800&q=80',
-    price: '₹200'
+    price: '₹300+',
+    subcategories: [
+      {
+        name: 'Hair Cutting',
+        items: [
+          { name: 'U Cut', price: '₹400' },
+          { name: 'V Cut', price: '₹400' },
+          { name: 'Straight Cut', price: '₹300' },
+          { name: 'Layer Cut (with wash)', price: '₹600' },
+          { name: 'Step Cut (with wash)', price: '₹600' },
+          { name: 'Feathered Cut (with wash)', price: '₹700' },
+          { name: 'Bob Cut', price: '₹700' },
+          { name: 'Pixie Cut', price: '₹800' }
+        ]
+      },
+      {
+        name: 'Hair Colouring',
+        items: [
+          { name: 'Global Hair Colour (Grey coverage)', price: '₹2200+' },
+          { name: 'Root Touch-Up', price: '₹1500' },
+          { name: 'Highlights (per strip)', price: '₹300' },
+          { name: 'Balayage', price: '₹4000+' }
+        ]
+      },
+      {
+        name: 'Chemical Treatments',
+        items: [
+          { name: 'Smoothening', price: '₹4000 to ₹10,000' },
+          { name: 'Keratin Treatment', price: '₹6000+' },
+          { name: 'Botox Treatment', price: '₹7000+' }
+        ]
+      }
+    ]
   },
   {
-    id: 'smoothening',
-    title: 'Hair Smoothening',
-    description: 'Transform frizzy hair into silky, manageable perfection with our professional smoothening treatments.',
-    details: 'Using premium products like L\'Oréal Professionnel and Schwarzkopf, we provide long-lasting smoothening that restores shine and eliminates frizz.',
-    icon: Sparkles,
-    image: 'https://images.unsplash.com/photo-1594465919760-441fe540f1f5?w=800&q=80',
-    price: '₹2,500'
-  },
-  {
-    id: 'coloring',
-    title: 'Hair Coloring',
-    description: 'Vibrant, long-lasting color from subtle balayage to bold transformations — expertly done every time.',
-    details: 'From root touch-ups to creative global coloring and highlights, our experts use ammonia-free options to protect your hair while achieving the perfect shade.',
-    icon: Palette,
-    image: 'https://images.unsplash.com/photo-1562322140-8baeececf3df?w=800&q=80',
-    price: '₹800'
-  },
-  {
-    id: 'spa',
-    title: 'Hair Spa',
-    description: 'Deep conditioning and restorative treatments that bring life, shine, and strength back to your hair.',
-    details: 'A multi-step process involving scalp massage, steaming, and nutrient-rich masks to combat dryness, dandruff, and hair fall.',
-    icon: Droplet,
-    image: 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?w=800&q=80',
-    price: '₹600'
-  },
-  {
-    id: 'threading',
-    title: 'Eyebrow & Threading',
-    description: 'Perfectly shaped brows that frame your features beautifully — clean, precise, and painless.',
-    details: 'Our experts specialize in threading for eyebrows, upper lip, and chin, ensuring sharp definitions and minimal discomfort.',
-    icon: Eye,
-    image: 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?w=800&q=80',
-    price: '₹40'
-  },
-  {
-    id: 'skincare',
-    title: 'Skin Care',
-    description: 'Nourishing facials, clean-ups, and skin treatments for naturally glowing, healthy skin.',
-    details: 'Offering Hydra-facials, Gold facials, and fruit clean-ups tailored to your skin type. We use biological products that deliver visible results.',
+    id: 'skin-ladies',
+    title: 'Skin Care (Ladies)',
+    description: 'Nourishing facials, clean-ups, and skin-specific treatments.',
     icon: Smile,
     image: 'https://images.unsplash.com/photo-1512290923902-8a9f81dc2069?w=800&q=80',
-    price: '₹500'
+    price: '₹500+',
+    subcategories: [
+      {
+        name: 'Facials',
+        items: [
+          { name: 'Basic Facial', price: '₹1500' },
+          { name: 'Premium Facial', price: '₹2500' },
+          { name: 'Luxury / Hydra Facial', price: '₹4000' }
+        ]
+      },
+      {
+        name: 'Cleanup & De-Tan',
+        items: [
+          { name: 'Cleanup Basic', price: '₹600' },
+          { name: 'De-Tan Basic', price: '₹500' },
+          { name: 'Face Massage (20 mins)', price: '₹800+' }
+        ]
+      }
+    ]
   },
   {
-    id: 'bridal',
-    title: 'Bridal Services',
-    description: 'Complete bridal packages for your most special day — makeup, hair, and full beauty preparation.',
-    details: 'Kerala traditional bridal looks, Christian weddings, and contemporary receptions. We handle everything from saree draping to HD makeup.',
+    id: 'advanced-clinical',
+    title: 'Clinical Treatments',
+    description: 'Advanced aesthetic and medical-grade skin and hair treatments.',
+    icon: Sparkles,
+    image: 'https://images.unsplash.com/photo-1594465919760-441fe540f1f5?w=800&q=80',
+    price: '₹1500+',
+    subcategories: [
+      {
+        name: 'Advanced Skin',
+        items: [
+          { name: 'Carbon Laser Toning', price: '₹6000' },
+          { name: 'IPL Photo Laser', price: '₹5500' },
+          { name: 'Microneedling', price: '₹6000' },
+          { name: 'BB Glow Treatment', price: '₹6000' }
+        ]
+      },
+      {
+        name: 'Aesthetic',
+        items: [
+          { name: 'Microblading', price: '₹10,000' },
+          { name: 'Lip Neutralizing', price: '₹4000' },
+          { name: 'Beauty Spot', price: '₹500' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'bridal-packages',
+    title: 'Bridal & Combos',
+    description: 'Curated beauty packages for your most special day.',
     icon: Moon,
     image: 'https://images.unsplash.com/photo-1595152271333-5c02613ce991?w=800&q=80',
-    price: '₹5,000'
+    price: '₹5,999+',
+    subcategories: [
+      {
+        name: 'Packages',
+        items: [
+          { name: 'Silver Package', price: '₹5,999' },
+          { name: 'Platinum Package', price: '₹9,999' },
+          { name: 'Diamond Package', price: '₹14,999' }
+        ]
+      },
+      {
+        name: 'Special Services',
+        items: [
+          { name: 'Bridal Makeup', price: 'Consultation' },
+          { name: 'Photography/Events', price: 'Custom' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'kids-hair',
+    title: 'Kids Services',
+    description: 'Gentle and stylish hair services for our youngest clients.',
+    icon: Star,
+    image: 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=800&q=80',
+    price: '₹200+',
+    subcategories: [
+      {
+        name: 'Hair Cuts',
+        items: [
+          { name: 'Layer / Bob Cut', price: '₹500+' },
+          { name: 'Butterfly / Feather', price: '₹700' },
+          { name: 'Baby Cut', price: '₹300' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'mani-pedi',
+    title: 'Mani & Pedi',
+    description: 'Indulgent hand and foot care from basic grooming to premium luxury.',
+    icon: Droplet,
+    image: 'https://images.unsplash.com/photo-1519415510236-855bc7bd4064?w=800&q=80',
+    price: '₹500+',
+    subcategories: [
+      {
+        name: 'Treatments',
+        items: [
+          { name: 'Ordinary Mani/Pedi', price: '₹500/₹900' },
+          { name: 'Classic Mani/Pedi', price: '₹700/₹1300' },
+          { name: 'Premium Mani/Pedi', price: '₹1500/₹2000' }
+        ]
+      }
+    ]
   },
   {
     id: 'waxing',
-    title: 'Waxing & Pedicure',
-    description: 'Smooth, long-lasting results from expert waxing and indulgent pedicure treatments.',
-    details: 'Hygienic waxing services using gentle wax, paired with a relaxing pedicure session that keeps your feet soft and happy.',
-    icon: Star,
-    image: 'https://images.unsplash.com/photo-1519415510236-855bc7bd4064?w=800&q=80',
-    price: '₹300'
+    title: 'Waxing Services',
+    description: 'Smooth results with Regular and Premium Rica wax options.',
+    icon: Sparkles,
+    image: 'https://images.unsplash.com/photo-1560750588-73207b1ef5b8?w=800&q=80',
+    price: '₹150+',
+    subcategories: [
+      {
+        name: 'Body Waxing',
+        items: [
+          { name: 'Full Arm / Leg', price: '₹800/₹1200' },
+          { name: 'Full Body', price: '₹4000' }
+        ]
+      },
+      {
+        name: 'Face (Rica)',
+        items: [
+          { name: 'Upper Lip / Chin', price: '₹150' },
+          { name: 'Forehead / Side Lock', price: '₹150' },
+          { name: 'Full Face', price: '₹500' }
+        ]
+      }
+    ]
   },
+  {
+    id: 'makeup-events',
+    title: 'Makeup & Events',
+    description: 'Professional makeup for weddings, parties, and special occasions.',
+    icon: Palette,
+    image: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=800&q=80',
+    price: 'Custom',
+    subcategories: [
+      {
+        name: 'Makeup',
+        items: [
+          { name: 'Bridal Makeup', price: 'Requirement base' },
+          { name: 'Party Makeup', price: 'Requirement base' },
+          { name: 'Reception Makeup', price: 'Requirement base' }
+        ]
+      },
+      {
+        name: 'Special Event Packages',
+        items: [
+          { name: 'Bridal Makeover', price: 'Custom' },
+          { name: 'Costume & Events', price: 'Custom' },
+          { name: 'Photography/Video', price: 'Custom' }
+        ]
+      }
+    ]
+  }
 ];
 
-const EXPERTS = [
+const SPECIALISTS = [
   {
-    name: "Uvais",
-    specialty: "Master Hair Stylist",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80",
-    experience: "12+ Years"
+    title: "Hair Specialists",
+    description: "Master stylists specializing in precision cutting, clinical smoothening, and advanced ammonia-free transformations.",
+    icon: Scissors,
+    tag: "Artistry"
   },
   {
-    name: "Soumya",
-    specialty: "Skin & Bridal Expert",
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&q=80",
-    experience: "8+ Years"
+    title: "Skin Experts",
+    description: "Certified professionals providing advanced hydra-facials, chemical peels, and restorative biological skin treatments.",
+    icon: Sparkles,
+    tag: "Clinical"
   },
   {
-    name: "Shaan",
-    specialty: "Smoothening Specialist",
-    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&q=80",
-    experience: "10+ Years"
-  },
-  {
-    name: "Sandhya",
-    specialty: "Beauty Consultant",
-    image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&q=80",
-    experience: "7+ Years"
+    title: "Professional Beauticians",
+    description: "Experts in traditional and contemporary bridal makeup, saree draping, and meticulous aesthetic refinement.",
+    icon: Palette,
+    tag: "Precision"
   }
 ];
 
@@ -174,15 +309,6 @@ const TESTIMONIALS = [
     staff: "Team",
     rating: 4.6
   },
-];
-
-const GALLERY_IMAGES = [
-  { url: 'https://images.unsplash.com/photo-1562322140-8baeececf3df?w=600&q=80', category: 'Hair Color' },
-  { url: 'https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=600&q=80', category: 'Bridal' },
-  { url: 'https://images.unsplash.com/photo-1595152271333-5c02613ce991?w=600&q=80', category: 'Bridal Look' },
-  { url: 'https://images.unsplash.com/photo-1512290923902-8a9f81dc2069?w=600&q=80', category: 'Facial' },
-  { url: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80', category: 'Styling' },
-  { url: 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?w=600&q=80', category: 'Threading' },
 ];
 
 // --- Components ---
@@ -228,7 +354,7 @@ const Navbar = () => {
           ))}
           <div className="flex items-center gap-3">
             <a 
-              href="tel:+917012121125" 
+              href="tel:+916238570877" 
               className={`hidden lg:flex w-10 h-10 rounded-full items-center justify-center border transition-all ${scrolled ? 'border-purple-deep/10 text-purple-deep hover:bg-purple-deep hover:text-white' : 'border-white/20 text-white hover:bg-white hover:text-purple-deep'}`}
             >
               <Phone size={18} />
@@ -244,7 +370,7 @@ const Navbar = () => {
 
         <div className="md:hidden flex items-center gap-4">
           <a 
-            href="tel:+917012121125" 
+            href="tel:+916238570877" 
             className={`w-10 h-10 rounded-full flex items-center justify-center ${scrolled ? 'bg-purple-deep text-white shadow-lg' : 'bg-white text-purple-deep'}`}
           >
             <Phone size={18} />
@@ -312,16 +438,12 @@ const Hero = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1 }}
         >
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-lavender-200 text-xs font-bold uppercase tracking-[0.2em] mb-8">
-            <span className="w-2 h-2 bg-lavender-400 rounded-full animate-pulse shadow-[0_0_10px_#BC9EFF]" />
-            Kanhangad's Premier Salon
-          </div>
           <h1 className="text-5xl md:text-7xl font-bold text-white leading-[1.05] tracking-tight mb-6">
-            Experience <br />
-            <span className="italic font-serif text-lavender-300">Premium</span> Beauty
+            Experience Beauty, <br />
+            Backed by <span className="italic font-serif text-lavender-300">Expertise</span>
           </h1>
           <p className="text-xl text-lavender-100/60 max-w-lg mb-10 leading-relaxed font-light">
-            Award-winning care for your aesthetic needs. Join 1000+ happy clients in Kanhangad for premium hair, skin, and bridal services.
+            Founded in 2018, <span className="text-white font-semibold">ABCD Beauty Clinic</span> was built on one principle — <span className="text-lavender-300 italic font-medium">exceptional customer care</span>. <span className="text-lavender-300 font-medium">Trusted by 5,000+ clients</span>, we now bring our signature experience to Kanhangad, introducing advanced clinic-style beauty services inspired by Korean aesthetics.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <a href="#booking" className="bg-lavender-500 text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-lavender-600 transition-all hover:shadow-[0_0_30px_rgba(128,69,245,0.4)] flex justify-center items-center gap-3">
@@ -352,10 +474,10 @@ const Hero = () => {
         >
           <div className="relative z-10 p-4 bg-white/5 border border-white/10 rounded-[40px] backdrop-blur-3xl overflow-hidden shadow-2xl">
              <div className="grid grid-cols-2 gap-4 mb-4">
-                <img src="https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=400&q=80" className="rounded-3xl h-48 w-full object-cover" alt="Service" />
-                <img src="https://images.unsplash.com/photo-1594465919760-441fe540f1f5?w=400&q=80" className="rounded-3xl h-48 w-full object-cover" alt="Service" />
+                <img src="/hero1.png" className="rounded-3xl h-48 w-full object-cover" alt="Service" />
+                <img src="/hero2.png" className="rounded-3xl h-48 w-full object-cover" alt="Service" />
              </div>
-             <img src="https://images.unsplash.com/photo-1560750588-73207b1ef5b8?w=800&q=80" className="rounded-3xl h-64 w-full object-cover" alt="Salon" />
+             <img src="/hero3.png" className="rounded-3xl h-64 w-full object-cover" alt="Salon" />
           </div>
           <div className="absolute -top-10 -right-10 w-24 h-24 bg-lavender-500 rounded-full blur-3xl opacity-50" />
           <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-600 rounded-full blur-3xl opacity-30" />
@@ -464,34 +586,46 @@ const ServicesSection = () => {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-2xl bg-mist rounded-[40px] overflow-hidden shadow-2xl"
+              className="relative w-full max-w-2xl bg-purple-ink rounded-[40px] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col border border-white/10"
             >
               <button 
                 onClick={() => setSelectedService(null)}
-                className="absolute top-6 right-6 z-10 p-3 bg-white/10 hover:bg-white/20 rounded-full text-purple-deep transition-colors"
+                className="absolute top-6 right-6 z-20 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors backdrop-blur-md"
               >
                 <X size={24} />
               </button>
-              <div className="h-64 relative overflow-hidden">
-                <img src={selectedService.image} alt={selectedService.title} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-mist to-transparent" />
-              </div>
-              <div className="p-10 -mt-10 relative">
-                <div className="inline-block p-4 rounded-3xl bg-white text-lavender-600 shadow-sm mb-6">
-                  <selectedService.icon size={32} />
-                </div>
-                <h3 className="text-4xl font-bold text-purple-deep mb-2">{selectedService.title}</h3>
-                <div className="text-xl font-bold text-lavender-600 mb-6">Starting from {selectedService.price}</div>
-                <p className="text-lg text-text-muted leading-relaxed font-light italic mb-10">
-                  {selectedService.details}
-                </p>
-                <div className="flex gap-4">
-                  <a href="#booking" onClick={() => setSelectedService(null)} className="flex-1 bg-purple-deep text-white text-center py-5 rounded-3xl font-bold text-lg hover:bg-lavender-600 transition-colors">
-                    Book Treatment
-                  </a>
-                  <a href={`https://wa.me/917012121125?text=I am interested in ${selectedService.title}`} target="_blank" className="bg-[#22C55E] text-white px-8 py-5 rounded-3xl font-bold flex items-center justify-center hover:bg-green-600 transition-colors">
-                    <Phone size={24} />
-                  </a>
+              <div className="overflow-y-auto flex-grow custom-scrollbar overscroll-contain">
+                <div className="p-10 relative">
+                  <div className="inline-block p-4 rounded-3xl bg-white/10 text-lavender-300 shadow-sm mb-6">
+                    <selectedService.icon size={32} />
+                  </div>
+                  <h3 className="text-4xl font-bold text-white mb-2">{selectedService.title}</h3>
+                  <div className="text-xl font-bold text-lavender-400 mb-8">Service Menu</div>
+                  
+                  <div className="space-y-10 mb-12">
+                    {selectedService.subcategories?.map((cat) => (
+                      <div key={cat.name}>
+                        <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-white/40 mb-4">{cat.name}</h4>
+                        <div className="space-y-3">
+                          {cat.items.map((item) => (
+                            <div key={item.name} className="flex justify-between items-center py-3 border-b border-white/5">
+                              <span className="text-white/90 font-medium">{item.name}</span>
+                              <span className="text-lavender-300 font-bold">{item.price}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-4 sticky bottom-0 pt-6 bg-purple-ink/90 backdrop-blur-md pb-4">
+                    <a href="#booking" onClick={() => setSelectedService(null)} className="flex-1 bg-lavender-500 text-white text-center py-5 rounded-3xl font-bold text-lg hover:bg-lavender-600 transition-colors">
+                      Book Treatment
+                    </a>
+                    <a href={`https://wa.me/916238570877?text=I am interested in ${selectedService.title}`} target="_blank" className="bg-[#22C55E] text-white px-8 py-5 rounded-3xl font-bold flex items-center justify-center hover:bg-green-600 transition-colors" title="Chat on WhatsApp">
+                      <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.539 2.016 2.041-.536c1.01.623 1.956.955 3.251.956 3.181 0 5.767-2.587 5.768-5.766 0-3.18-2.587-5.767-5.772-5.767zm3.377 8.272c-.14.393-.812.756-1.12.784-.285.026-.642.152-1.812-.332-1.498-.619-2.459-2.15-2.534-2.25-.075-.1-.611-.812-.611-1.55 0-.737.387-1.1.527-1.253.14-.153.307-.19.41-.19.102 0 .204.001.292.006.091.004.215-.035.337.257.123.292.42 1.022.457 1.096.037.074.062.161.012.261-.05.1-.075.161-.149.25-.1.124-.2.224-.287.323-.087.1-.177.211-.077.383.1.171.442.73.948 1.18.653.58 1.203.76 1.374.846.171.086.271.071.371-.044.1-.114.426-.496.539-.666.113-.17.227-.142.383-.085s.988.468 1.158.553c.17.085.284.128.326.202.04.072.04.42-.1.813z"/></svg>
+                    </a>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -558,41 +692,6 @@ const TestimonialsMarquee = () => {
   );
 };
 
-const Gallery = () => {
-  return (
-    <section id="gallery" className="py-24 bg-mist">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="text-center mb-16">
-          <span className="text-xs font-bold uppercase tracking-[0.3em] text-lavender-600 mb-4 block">Transformations</span>
-          <h2 className="text-4xl font-bold mb-4 tracking-tight text-purple-deep">Beauty in Every Frame</h2>
-          <p className="text-xl text-gray-400 font-light italic">Witness the magic of professional care.</p>
-        </div>
-
-        <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6">
-          {GALLERY_IMAGES.map((img, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: idx * 0.1 }}
-              whileHover={{ y: -10 }}
-              className="relative group rounded-[32px] overflow-hidden cursor-pointer shadow-lg"
-            >
-              <img src={img.url} alt={img.category} className="w-full object-cover transition-transform duration-700 group-hover:scale-110" />
-              <div className="absolute inset-0 bg-purple-ink/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-8 backdrop-blur-[2px]">
-                <span className="text-white font-bold bg-white/20 px-5 py-2.5 rounded-full border border-white/40 backdrop-blur-md">
-                  {img.category}
-                </span>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
-
 const FindUs = () => {
   return (
     <section id="findus" className="py-28 relative bg-purple-ink text-white overflow-hidden">
@@ -623,8 +722,17 @@ const FindUs = () => {
                 <Phone className="text-lavender-400" size={28} />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-white/40 font-bold mb-2">Let's talk</p>
-                <a href="tel:+917012121125" className="text-2xl font-bold hover:text-lavender-400 transition-colors">070121 21125</a>
+                <p className="text-xs uppercase tracking-[0.2em] text-white/40 font-bold mb-2">Get in touch</p>
+                <div className="space-y-4">
+                  <div>
+                    <span className="text-xs text-white/40 uppercase tracking-widest block mb-1">Call Us</span>
+                    <a href="tel:+916238570877" className="text-2xl font-bold hover:text-lavender-400 transition-colors">062385 70877</a>
+                  </div>
+                  <div>
+                    <span className="text-xs text-white/40 uppercase tracking-widest block mb-1">WhatsApp</span>
+                    <a href="https://wa.me/916238570877" target="_blank" rel="noopener noreferrer" className="text-2xl font-bold text-[#25D366] hover:text-green-400 transition-colors">062385 70877</a>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -685,7 +793,19 @@ const FindUs = () => {
   );
 };
 
-const Footer = () => {
+const Footer = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
+  const [clickCount, setClickCount] = useState(0);
+  
+  const handleSecretClick = () => {
+    setClickCount(prev => prev + 1);
+    if (clickCount + 1 >= 5) {
+      onOpenAdmin();
+      setClickCount(0);
+    }
+    // Reset count after 2 seconds of inactivity
+    setTimeout(() => setClickCount(0), 3000);
+  };
+
   return (
     <footer className="bg-purple-darker py-16 border-t border-white/5">
       <div className="max-w-7xl mx-auto px-6">
@@ -693,21 +813,24 @@ const Footer = () => {
           <div className="col-span-2">
             <Logo className="mb-10" inverted={true} />
             <p className="text-white/40 max-w-sm text-lg font-light leading-relaxed italic">
-              Empowering beauty and confidence in Kanhangad since 2015. Visit our unisex clinic for professional transformations.
+              Empowering beauty and confidence in Kanhangad since 2018. Visit our unisex clinic for professional transformations.
             </p>
             <div className="flex gap-6 mt-12">
               <a href="https://www.instagram.com/abcdbeautyclinic?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-lavender-600 transition-all">
                 <Instagram size={24} />
               </a>
-              <a href="https://wa.me/917012121125" className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-green-600 transition-all">
+              <a href="tel:+916238570877" className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-lavender-600 transition-all" title="Call Us">
                 <Phone size={22} />
+              </a>
+              <a href="https://wa.me/916238570877" target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-green-600 transition-all" title="WhatsApp Us">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.539 2.016 2.041-.536c1.01.623 1.956.955 3.251.956 3.181 0 5.767-2.587 5.768-5.766 0-3.18-2.587-5.767-5.772-5.767zm3.377 8.272c-.14.393-.812.756-1.12.784-.285.026-.642.152-1.812-.332-1.498-.619-2.459-2.15-2.534-2.25-.075-.1-.611-.812-.611-1.55 0-.737.387-1.1.527-1.253.14-.153.307-.19.41-.19.102 0 .204.001.292.006.091.004.215-.035.337.257.123.292.42 1.022.457 1.096.037.074.062.161.012.261-.05.1-.075.161-.149.25-.1.124-.2.224-.287.323-.087.1-.177.211-.077.383.1.171.442.73.948 1.18.653.58 1.203.76 1.374.846.171.086.271.071.371-.044.1-.114.426-.496.539-.666.113-.17.227-.142.383-.085s.988.468 1.158.553c.17.085.284.128.326.202.04.072.04.42-.1.813z"/></svg>
               </a>
             </div>
           </div>
           <div>
-            <h4 className="text-xs uppercase tracking-[0.2em] text-white/50 mb-8 font-bold">Services</h4>
+            <h4 className="text-xs uppercase tracking-[0.2em] text-white/50 mb-8 font-bold">Quick Links</h4>
             <ul className="space-y-4">
-              {['Haircut', 'Smoothening', 'Coloring', 'Skin Care'].map(s => (
+              {['Hair Services', 'Skin Care', 'Clinical', 'Bridal'].map(s => (
                 <li key={s}><a href="#services" className="text-white/30 hover:text-lavender-300 transition-colors font-light">{s}</a></li>
               ))}
             </ul>
@@ -727,7 +850,12 @@ const Footer = () => {
           </div>
         </div>
         <div className="pt-12 border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-8">
-          <p className="text-sm text-white/20">© 2026 ABCD Beauty Clinic. All Professional Care.</p>
+          <p 
+            onClick={handleSecretClick}
+            className="text-sm text-white/20 cursor-default select-none"
+          >
+            © 2026 ABCD Beauty Clinic. All Professional Care.
+          </p>
           <div className="flex gap-10">
             <a href="#" className="text-xs uppercase tracking-widest text-white/20 hover:text-white transition-colors">Privacy</a>
             <a href="#" className="text-xs uppercase tracking-widest text-white/20 hover:text-white transition-colors">Terms</a>
@@ -740,18 +868,45 @@ const Footer = () => {
 
 const BookingSection = () => {
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+    
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
-    const name = formData.get('name');
-    const service = formData.get('service');
-    const msg = `Hi ABCD Beauty! I am ${name}. I want to book for ${service}.`;
-    setTimeout(() => {
-        window.open(`https://wa.me/917012121125?text=${encodeURIComponent(msg)}`, '_blank');
-    }, 1500);
+    
+    const appointmentData = {
+      name: formData.get('name'),
+      service: formData.get('service'),
+      phone: formData.get('phone'),
+      status: 'pending',
+      createdAt: serverTimestamp(),
+      userId: auth.currentUser?.uid || 'anonymous'
+    };
+
+    try {
+      await addDoc(collection(db, 'appointments'), appointmentData);
+      
+      // Format the WhatsApp message
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+      const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+      
+      const message = `🔔 New Booking Alert!\n\nDate: ${dateStr}\nTime: ${timeStr}\n\nName: ${appointmentData.name}\nService: ${appointmentData.service}\nPhone: ${appointmentData.phone}`;
+      const encodedMessage = encodeURIComponent(message);
+      
+      // Open WhatsApp in a new tab
+      window.open(`https://wa.me/916238570877?text=${encodedMessage}`, '_blank');
+
+      setSubmitted(true);
+    } catch (error) {
+      console.error("Error saving appointment:", error);
+      alert("Something went wrong. Please call us directly.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -774,7 +929,7 @@ const BookingSection = () => {
                 <CheckCircle2 size={48} />
               </div>
               <h3 className="text-4xl font-bold text-purple-deep mb-4">Request Sent!</h3>
-              <p className="text-gray-500 mb-10 italic text-lg">We're redirecting you to WhatsApp for instant confirmation...</p>
+              <p className="text-gray-500 mb-10 italic text-lg">Thank you for booking. We will contact you shortly for confirmation.</p>
               <button 
                 onClick={() => setSubmitted(false)}
                 className="text-sm font-bold text-lavender-600 hover:underline"
@@ -793,7 +948,17 @@ const BookingSection = () => {
                   <label className="text-[10px] uppercase font-bold tracking-[0.2em] text-lavender-400 ml-4">Service</label>
                   <select name="service" required className="w-full bg-white border border-lavender-100 rounded-3xl px-8 py-5 focus:outline-none focus:ring-2 focus:ring-lavender-400 transition-all text-purple-deep appearance-none">
                     <option value="">Select Service</option>
-                    {SERVICES.map(s => <option key={s.id} value={s.title}>{s.title}</option>)}
+                    {SERVICES.map(category => (
+                      <optgroup key={category.id} label={category.title}>
+                        {category.subcategories?.map(sub => (
+                          sub.items.map(item => (
+                            <option key={`${category.id}-${item.name}`} value={item.name}>
+                              {item.name}
+                            </option>
+                          ))
+                        ))}
+                      </optgroup>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -801,8 +966,12 @@ const BookingSection = () => {
                 <label className="text-[10px] uppercase font-bold tracking-[0.2em] text-lavender-400 ml-4">Phone Number</label>
                 <input name="phone" required type="tel" placeholder="+91" className="w-full bg-white border border-lavender-100 rounded-3xl px-8 py-5 focus:outline-none focus:ring-2 focus:ring-lavender-400 transition-all text-purple-deep" />
               </div>
-              <button type="submit" className="w-full bg-purple-deep text-white py-6 rounded-3xl font-bold text-xl hover:bg-lavender-600 hover:shadow-2xl transition-all flex items-center justify-center gap-4">
-                Confirm Appointment
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="w-full bg-purple-deep text-white py-6 rounded-3xl font-bold text-xl hover:bg-lavender-600 hover:shadow-2xl transition-all flex items-center justify-center gap-4 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Processing...' : 'Confirm Appointment'}
                 <ArrowRight size={24} />
               </button>
             </form>
@@ -813,36 +982,215 @@ const BookingSection = () => {
   );
 };
 
-const ExpertsSection = () => {
+const AdminSection = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const isAdminUser = user?.email && ADMIN_EMAILS.includes(user.email);
+
+  useEffect(() => {
+    if (isAdminUser) {
+      setError(null);
+      const q = query(collection(db, 'appointments'), orderBy('createdAt', 'desc'));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        setAppointments(docs);
+      }, (err) => {
+        console.error("Firestore error:", err);
+        setError("Permission Denied: You do not have access to view these records.");
+      });
+      return () => unsubscribe();
+    } else if (user) {
+      setError(`Access Denied: ${user.email} is not an authorized administrator.`);
+    }
+  }, [user, isAdminUser]);
+
+  const handleLogin = async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (error) {
+      console.error("Login failed:", error);
+      setError("Login failed. Please try again.");
+    }
+  };
+
+  const handleLogout = () => {
+    signOut(auth);
+    setAppointments([]);
+    setError(null);
+  };
+
+  const updateStatus = async (id: string, newStatus: string) => {
+    try {
+      await updateDoc(doc(db, 'appointments', id), { status: newStatus });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const deleteBooking = async (id: string) => {
+    if (confirm("Delete this appointment?")) {
+      await deleteDoc(doc(db, 'appointments', id));
+    }
+  };
+
+  if (!isOpen) return null;
+
   return (
-    <section id="experts" className="py-24 bg-mist">
+    <AnimatePresence>
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100] bg-white overflow-y-auto"
+      >
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="flex justify-between items-start mb-12">
+            <div>
+              <button 
+                onClick={onClose}
+                className="flex items-center gap-2 text-lavender-600 mb-6 font-bold hover:translate-x-[-4px] transition-transform"
+              >
+                <ChevronLeft size={20} />
+                Back to Site
+              </button>
+              <span className="text-xs font-bold uppercase tracking-[0.3em] text-lavender-600 mb-4 block">Dashboard</span>
+              <h2 className="text-4xl font-bold tracking-tight text-purple-deep">Admin Panel</h2>
+            </div>
+            {user ? (
+              <div className="flex items-center gap-4 bg-mist p-3 rounded-2xl border border-lavender-100">
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-bold text-purple-deep">{user.displayName}</p>
+                  <p className="text-[10px] text-gray-400">{user.email}</p>
+                </div>
+                <button 
+                  onClick={handleLogout}
+                  className="p-3 bg-white text-red-500 rounded-xl hover:bg-red-50 transition-colors shadow-sm"
+                  title="Logout"
+                >
+                  <LogOut size={20} />
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={handleLogin}
+                className="bg-purple-deep text-white px-8 py-3 rounded-full font-bold flex items-center gap-3 hover:bg-lavender-600 transition-all shadow-lg"
+              >
+                <Lock size={18} />
+                Login to Dashboard
+              </button>
+            )}
+          </div>
+
+          {error && (
+            <div className="mb-8 p-6 bg-red-50 border border-red-100 rounded-3xl text-red-600 font-medium text-center">
+              {error}
+            </div>
+          )}
+
+          {isAdminUser ? (
+            <div className="grid gap-6">
+              {appointments.length === 0 ? (
+                <div className="text-center py-20 bg-mist rounded-[40px] border-2 border-dashed border-lavender-200">
+                  <Calendar className="mx-auto text-lavender-300 mb-4" size={48} />
+                  <p className="text-gray-400 italic">No bookings found yet.</p>
+                </div>
+              ) : (
+                appointments.map((app) => (
+                  <motion.div 
+                    layout
+                    key={app.id}
+                    className="bg-mist p-8 rounded-[32px] border border-lavender-100 flex flex-col md:flex-row justify-between items-center gap-8 group hover:shadow-xl transition-all"
+                  >
+                    <div className="flex-grow">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h4 className="text-xl font-bold text-purple-deep">{app.name}</h4>
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                          app.status === 'confirmed' ? 'bg-green-100 text-green-600' : 
+                          app.status === 'cancelled' ? 'bg-red-100 text-red-600' : 
+                          'bg-yellow-100 text-yellow-600'
+                        }`}>
+                          {app.status}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-500 font-medium mb-1">Service: <span className="text-purple-deep">{app.service}</span></p>
+                      <p className="text-sm text-gray-500 font-medium">Contact: <a href={`tel:${app.phone}`} className="text-lavender-600 hover:underline">{app.phone}</a></p>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                      {app.status === 'pending' && (
+                        <button 
+                          onClick={() => updateStatus(app.id, 'confirmed')}
+                          className="bg-green-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-green-600 transition-colors shadow-sm"
+                        >
+                          Confirm
+                        </button>
+                      )}
+                      <button 
+                        onClick={() => updateStatus(app.id, 'cancelled')}
+                        className="bg-white text-gray-400 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors border border-lavender-100 shadow-sm"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={() => deleteBooking(app.id)}
+                        className="p-2.5 text-gray-300 hover:text-red-500 transition-colors"
+                        title="Delete Permanently"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-20 bg-mist rounded-[40px] border border-lavender-100">
+              <p className="text-gray-400 italic">Please log in with the admin account to view appointments.</p>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
+const SpecialistsSection = () => {
+  return (
+    <section id="specialists" className="py-24 bg-mist">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-16">
-          <span className="text-xs font-bold uppercase tracking-[0.3em] text-lavender-600 mb-4 block">Our Team</span>
-          <h2 className="text-4xl font-bold tracking-tight text-purple-deep mb-4">Meet Our Professional Stylists</h2>
-          <p className="text-gray-400 text-lg font-light italic">Artistry backed by years of experience.</p>
+          <span className="text-xs font-bold uppercase tracking-[0.3em] text-lavender-600 mb-4 block">Expertise</span>
+          <h2 className="text-4xl font-bold tracking-tight text-purple-deep mb-4">Our Specializations</h2>
+          <p className="text-gray-400 text-lg font-light italic">Artistry backed by scientific precision and decades of experience.</p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {EXPERTS.map((expert, idx) => (
+        <div className="grid md:grid-cols-3 gap-8">
+          {SPECIALISTS.map((spec, idx) => (
             <motion.div 
-              key={expert.name}
+              key={spec.title}
               initial={{ opacity: 0, scale: 0.9 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ delay: idx * 0.1 }}
-              whileHover={{ y: -10 }}
-              className="group bg-white rounded-[40px] p-4 shadow-sm hover:shadow-xl transition-all border border-lavender-100"
+              className="group bg-white rounded-[40px] p-10 shadow-sm hover:shadow-2xl transition-all duration-500 border border-lavender-100 flex flex-col items-center text-center"
             >
-              <div className="relative aspect-[4/5] rounded-[32px] overflow-hidden mb-6">
-                <img src={expert.image} alt={expert.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
-                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full text-[10px] font-bold text-purple-deep uppercase tracking-widest shadow-sm">
-                  {expert.experience}
-                </div>
+              <div className="w-24 h-24 rounded-3xl bg-lavender-50 flex items-center justify-center text-lavender-600 mb-8 group-hover:bg-purple-deep group-hover:text-white transition-all duration-500">
+                <spec.icon size={48} />
               </div>
-              <div className="px-4 pb-4">
-                <h4 className="text-xl font-bold text-purple-deep mb-1">{expert.name}</h4>
-                <p className="text-lavender-500 font-medium text-sm">{expert.specialty}</p>
+              <div className="px-4">
+                <h4 className="text-2xl font-bold text-purple-deep mb-3 uppercase tracking-tight">{spec.title}</h4>
+                <p className="text-gray-500 font-light text-sm leading-relaxed italic">{spec.description}</p>
               </div>
             </motion.div>
           ))}
@@ -855,7 +1203,7 @@ const ExpertsSection = () => {
 const WhatsAppFloatingButton = () => {
   return (
     <motion.a
-      href="https://wa.me/917012121125"
+      href="https://wa.me/916238570877"
       target="_blank"
       initial={{ scale: 0, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
@@ -873,6 +1221,8 @@ const WhatsAppFloatingButton = () => {
 };
 
 export default function App() {
+  const [adminOpen, setAdminOpen] = useState(false);
+
   return (
     <div className="selection:bg-lavender-100 selection:text-lavender-900">
       <Navbar />
@@ -891,15 +1241,14 @@ export default function App() {
               "Where expertise <span className="text-gray-300">meets</span> warmth."
             </motion.h2>
             <p className="text-xl md:text-2xl text-gray-500 font-light leading-relaxed italic">
-              Since 2015, ABCD Beauty Clinic has been a sanctuary for beauty enthusiasts in Kanhangad. Founded on the principles of <span className="text-black font-medium">hygiene, precision, and hospitality</span>.
+              Since 2018, ABCD Beauty Clinic has been a sanctuary for beauty enthusiasts in Kanhangad. Founded on the principles of <span className="text-black font-medium">hygiene, precision, and hospitality</span>.
             </p>
           </div>
         </section>
 
         <ServicesSection />
-        <ExpertsSection />
+        <SpecialistsSection />
         <TestimonialsMarquee />
-        <Gallery />
         <BookingSection />
         <FindUs />
 
@@ -943,7 +1292,8 @@ export default function App() {
           </div>
         </section>
       </main>
-      <Footer />
+      <Footer onOpenAdmin={() => setAdminOpen(true)} />
+      <AdminSection isOpen={adminOpen} onClose={() => setAdminOpen(false)} />
       <WhatsAppFloatingButton />
     </div>
   );

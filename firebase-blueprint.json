@@ -1,0 +1,28 @@
+{
+  "entities": {
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Store user booking requests",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The UID of the user who booked (if authenticated)" },
+        "name": { "type": "string", "description": "Full name of the client" },
+        "service": { "type": "string", "description": "Selected service name" },
+        "phone": { "type": "string", "description": "Client phone number" },
+        "status": { 
+          "type": "string", 
+          "enum": ["pending", "confirmed", "cancelled"],
+          "description": "Status of the booking" 
+        },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of creation" }
+      },
+      "required": ["name", "service", "phone", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "appointments/{appointmentId}": {
+      "schema": "Appointment",
+      "description": "Collection of all service bookings"
+    }
+  }
+}
