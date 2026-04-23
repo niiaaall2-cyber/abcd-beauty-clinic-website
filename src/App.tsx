@@ -32,10 +32,10 @@ import { db, auth, googleProvider } from './lib/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
 
-import logoOfficial from './assets/logo.png';
-import hero1 from './assets/hero_1.png';
-import hero2 from './assets/hero_2.png';
-import hero3 from './assets/hero_3.png';
+import logoOfficial from './assets/logo_v2.png';
+import hero1 from './assets/h1_v2.png';
+import hero2 from './assets/h2_v2.png';
+import hero3 from './assets/h3_v2.png';
 
 // --- Constants & Types ---
 
@@ -320,12 +320,19 @@ const TESTIMONIALS = [
 
 const Logo = ({ className = "", inverted = false }: { className?: string; inverted?: boolean }) => {
   return (
-    <div className={`flex items-center ${className}`}>
+    <div className={`flex items-center gap-3 ${className}`}>
       <img 
         src={logoOfficial} 
         alt="ABCD Beauty Clinic" 
-        className={`h-16 md:h-28 w-auto object-contain transition-all duration-300 ${inverted ? 'brightness-0 invert' : ''}`}
+        className={`h-12 md:h-16 w-auto object-contain transition-all duration-300 ${inverted ? 'brightness-0 invert' : ''}`}
+        onError={(e) => {
+          // If image fails, hide it so only alt text or fallback shows
+          (e.target as HTMLImageElement).style.display = 'none';
+        }}
       />
+      <span className={`font-bold text-xl tracking-tight hidden sm:block ${inverted ? 'text-white' : 'text-purple-ink'}`}>
+        ABCD Beauty Clinic
+      </span>
     </div>
   );
 };
