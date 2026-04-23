@@ -34,7 +34,7 @@ import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/aut
 
 // --- Constants & Types ---
 
-const logoOfficial = "/logo.png";
+const logoOfficial = "/images/logo.png";
 const hero1 = "/images/hero1.png";
 const hero2 = "/images/hero2.png";
 const hero3 = "/images/hero3.png";
@@ -250,6 +250,91 @@ const SERVICES = [
           { name: 'Bridal Makeover', price: 'Custom' },
           { name: 'Costume & Events', price: 'Custom' },
           { name: 'Photography/Video', price: 'Custom' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'mens-hair-grooming',
+    title: 'Men\'s Hair & Grooming',
+    description: 'Precision cuts, beard styling, and advanced textures for the modern man.',
+    icon: Scissors,
+    image: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&q=80',
+    price: '₹200+',
+    subcategories: [
+      {
+        name: 'Classic & Luxury',
+        items: [
+          { name: 'Classic Haircut', price: '₹200' },
+          { name: 'Beard Trimming / Shave', price: '₹150+' },
+          { name: 'Haircut + Shaving (Wash)', price: '₹450' },
+          { name: 'Beard Styling', price: '₹200' },
+          { name: 'Luxury Grooming Combo', price: '₹600+' }
+        ]
+      },
+      {
+        name: 'Chemical & Scalp',
+        items: [
+          { name: 'Anti-Dandruff / Scalp Spa', price: '₹800+' },
+          { name: 'Hair Smoothening / Keratin', price: '₹3500+' },
+          { name: 'Hair / Beard Colouring', price: '₹600+' },
+          { name: 'Fashion Colour / Highlights', price: '₹1200+' },
+          { name: 'Head Massage (Oil/Normal)', price: '₹300+' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'mens-skin-aesthetic',
+    title: 'Men\'s Skin & Aesthetics',
+    description: 'Dermatological innovation meeting clinical precision for male skin health.',
+    icon: Sparkles,
+    image: 'https://images.unsplash.com/photo-1621607512214-68297480165e?w=800&q=80',
+    price: '₹600+',
+    subcategories: [
+      {
+        name: 'Clinical Skin',
+        items: [
+          { name: 'Basic / Glow Cleanup', price: '₹600 / ₹1200' },
+          { name: 'Premium Facial / Hydra', price: '₹2500 / ₹4500' },
+          { name: 'Carbon Laser Toning', price: '₹6000' },
+          { name: 'IPL Photo Facial / Hair Removal', price: 'Custom' },
+          { name: 'Microneedling (Face/Hair)', price: '₹6000' }
+        ]
+      },
+      {
+        name: 'Cosmetic Services',
+        items: [
+          { name: 'Microblading / Shading', price: '₹10,000+' },
+          { name: 'Lip Neutralizing / Colour', price: '₹4000+' },
+          { name: 'Tattoo Removal', price: 'Consultation' },
+          { name: 'Saggy Skin Tightening', price: '₹3500+' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'mens-packages-makeup',
+    title: 'Men\'s Packages & Events',
+    description: 'Complete transformation packages and specialized groom styling for events.',
+    icon: Moon,
+    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80',
+    price: '₹2,500+',
+    subcategories: [
+      {
+        name: 'Transformation Packages',
+        items: [
+          { name: 'Glow Groom Package', price: '₹2500+' },
+          { name: 'Booster Glow Up', price: '₹4000+' },
+          { name: 'Gold Glow Up (Total Transform)', price: '₹7500+' }
+        ]
+      },
+      {
+        name: 'Professional Styling',
+        items: [
+          { name: 'Groom / Night Reception Makeup', price: '₹3000+' },
+          { name: 'Nikkah / Special Event Makeup', price: '₹4000+' },
+          { name: 'Costume Styling & Makeover', price: 'Custom' }
         ]
       }
     ]
