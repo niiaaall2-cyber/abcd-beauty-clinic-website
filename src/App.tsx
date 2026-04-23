@@ -34,10 +34,10 @@ import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/aut
 
 // --- Constants & Types ---
 
-const logoOfficial = "/logo_final.png";
-const hero1 = "/hero_final_1.png";
-const hero2 = "/hero_final_2.png";
-const hero3 = "/hero_final_3.png";
+const logoOfficial = "/logo.png";
+const hero1 = "/hero1.png";
+const hero2 = "/hero2.png";
+const hero3 = "/hero3.png";
 
 const ADMIN_EMAILS = ['niiaaall2@gmail.com'];
 
@@ -325,10 +325,6 @@ const Logo = ({ className = "", inverted = false }: { className?: string; invert
         src={logoOfficial} 
         alt="ABCD Beauty Clinic" 
         className={`h-12 md:h-16 w-auto object-contain transition-all duration-300 ${inverted ? 'brightness-0 invert' : ''}`}
-        onError={(e) => {
-          // If image fails, hide it so only alt text or fallback shows
-          (e.target as HTMLImageElement).style.display = 'none';
-        }}
       />
       <span className={`font-bold text-xl tracking-tight hidden sm:block ${inverted ? 'text-white' : 'text-purple-ink'}`}>
         ABCD Beauty Clinic
@@ -1353,7 +1349,7 @@ export default function App() {
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="w-12 h-12 rounded-full border-2 border-white overflow-hidden shadow-md">
                     <img 
-                      src={`https://picsum.photos/seed/beauty${i}/100/100`} 
+                      src={`https://images.unsplash.com/photo-${i === 1 ? '1494790108377-be9c29b29330' : i === 2 ? '1507003211169-0a1dd7228f2d' : i === 3 ? '1534528741775-53994a69daeb' : '1500648767791-00dcc994a43e'}?w=200&h=200&fit=crop`} 
                       alt="Reviewer" 
                       className="w-full h-full object-cover"
                     />
