@@ -32,10 +32,10 @@ import { db, auth, googleProvider } from './lib/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
 
-import logoOfficial from './logo-official.png';
-import hero1 from './hero1.png';
-import hero2 from './hero2.png';
-import hero3 from './hero3.png';
+import logoOfficial from './assets/logo.png';
+import hero1 from './assets/hero_1.png';
+import hero2 from './assets/hero_2.png';
+import hero3 from './assets/hero_3.png';
 
 // --- Constants & Types ---
 
@@ -325,7 +325,6 @@ const Logo = ({ className = "", inverted = false }: { className?: string; invert
         src={logoOfficial} 
         alt="ABCD Beauty Clinic" 
         className={`h-16 md:h-28 w-auto object-contain transition-all duration-300 ${inverted ? 'brightness-0 invert' : ''}`}
-        referrerPolicy="no-referrer"
       />
     </div>
   );
