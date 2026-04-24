@@ -802,10 +802,21 @@ const FindUs = () => {
                 <MapPin className="text-lavender-400" size={28} />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-white/40 font-bold mb-2">Location</p>
-                <p className="text-xl font-light leading-relaxed">
-                  Near 100HP Car Dealers, Madiyan, Manikoth,<br /> Kanhangad, Kerala — 671316
-                </p>
+                <p className="text-xs uppercase tracking-[0.2em] text-white/40 font-bold mb-2">Our Locations</p>
+                <div className="space-y-4">
+                  <div>
+                    <span className="text-xs text-lavender-400 font-bold uppercase tracking-widest block mb-1">Kanhangad</span>
+                    <p className="text-lg font-light leading-relaxed">
+                      Near 100HP Car Dealers, Madiyan, Manikoth,<br /> Kanhangad, Kerala — 671316
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-lavender-400 font-bold uppercase tracking-widest block mb-1">Cherkala</span>
+                    <p className="text-lg font-light leading-relaxed">
+                      Cherkala Town, Kasaragod, Kerala
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -833,8 +844,27 @@ const FindUs = () => {
                 <Clock className="text-lavender-400" size={28} />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-white/40 font-bold mb-2">Open Hours</p>
-                <p className="text-xl font-light">Mon – Sat: 9AM – 8PM<br />Sun: 10AM – 6PM</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-white/40 font-bold mb-4">Open Hours</p>
+                <div className="grid grid-cols-2 gap-8">
+                  <div>
+                    <span className="text-[10px] text-white/40 tracking-[0.2em] uppercase font-bold block mb-2">Ladies</span>
+                    <p className="text-xl font-light">10:00 AM – 10:00 PM</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-white/40 tracking-[0.2em] uppercase font-bold block mb-2">Gents</span>
+                    <p className="text-xl font-light">10:00 AM – 12:00 AM</p>
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-col gap-2">
+                  <p className="text-lavender-400 font-bold text-sm tracking-widest uppercase">Open All Days</p>
+                  <div className="flex items-center gap-2 text-white/60 bg-white/5 py-3 px-5 rounded-2xl border border-white/10 mt-2">
+                    <span className="text-xl">🕒</span>
+                    <p className="text-xs font-medium italic">
+                      <span className="text-lavender-400 font-bold not-italic">24-Hour Service Available</span><br />
+                      (Only for pre-booked appointments)
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -905,7 +935,7 @@ const Footer = ({ onOpenAdmin, onOpenPrivacy, onOpenTerms }: { onOpenAdmin: () =
           <div className="col-span-2">
             <Logo className="mb-10" inverted={true} />
             <p className="text-white/40 max-w-sm text-lg font-light leading-relaxed italic">
-              Empowering beauty and confidence in Kanhangad since 2018. Visit our unisex clinic for professional transformations.
+              Empowering beauty and confidence in Kanhangad & Cherkala since 2018. Visit our unisex clinic for professional transformations.
             </p>
             <div className="flex gap-6 mt-12">
               <a href="https://www.instagram.com/abcdbeautyclinic?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-lavender-600 transition-all">
@@ -928,17 +958,33 @@ const Footer = ({ onOpenAdmin, onOpenPrivacy, onOpenTerms }: { onOpenAdmin: () =
             </ul>
           </div>
           <div>
-            <h4 className="text-xs uppercase tracking-[0.2em] text-white/50 mb-8 font-bold">Hours</h4>
-            <div className="text-white/30 font-light space-y-2">
-              <p>Mon – Sat: 9AM – 8PM</p>
-              <p>Sun: 10AM – 6PM</p>
+            <h4 className="text-xs uppercase tracking-[0.2em] text-white/50 mb-8 font-bold">Hours (All Days)</h4>
+            <div className="text-white/30 font-light space-y-4">
+              <div>
+                <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold mb-1">Ladies</p>
+                <p>10 AM – 10 PM</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold mb-1">Gents</p>
+                <p>10 AM – 12 AM</p>
+              </div>
+              <p className="text-[10px] text-lavender-500/50 italic leading-tight">
+                24-Hour service available for pre-booked appointments
+              </p>
             </div>
           </div>
           <div>
-            <h4 className="text-xs uppercase tracking-[0.2em] text-white/50 mb-8 font-bold">Location</h4>
-            <p className="text-white/30 font-light leading-relaxed">
-              Madiyan, Manikoth,<br /> Kanhangad, Kerala — 671316
-            </p>
+            <h4 className="text-xs uppercase tracking-[0.2em] text-white/50 mb-8 font-bold">Locations</h4>
+            <div className="space-y-4">
+              <p className="text-white/30 font-light leading-tight">
+                <span className="text-white/40 font-bold block text-[10px] uppercase mb-1">Kanhangad</span>
+                Madiyan, Manikoth,<br /> Kanhangad, Kerala — 671316
+              </p>
+              <p className="text-white/30 font-light leading-tight">
+                <span className="text-white/40 font-bold block text-[10px] uppercase mb-1">Cherkala</span>
+                Cherkala Town, Kasaragod,<br /> Kerala
+              </p>
+            </div>
           </div>
         </div>
         <div className="pt-12 border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-8">
@@ -1410,7 +1456,7 @@ export default function App() {
               "Where expertise <span className="text-gray-300">meets</span> warmth."
             </motion.h2>
             <p className="text-xl md:text-2xl text-gray-500 font-light leading-relaxed italic">
-              Since 2018, ABCD Beauty Clinic has been a sanctuary for beauty enthusiasts in Kanhangad. Founded on the principles of <span className="text-black font-medium">hygiene, precision, and hospitality</span>.
+              Since 2018, ABCD Beauty Clinic has been a sanctuary for beauty enthusiasts in Kanhangad & Cherkala. Founded on the principles of <span className="text-black font-medium">hygiene, precision, and hospitality</span>.
             </p>
           </div>
         </section>
