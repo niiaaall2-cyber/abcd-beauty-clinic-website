@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useCallback, FormEvent, ReactNode } from 'react';
+import { useState, useEffect, useCallback, useRef, FormEvent, ReactNode, CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   MapPin,
@@ -119,6 +119,31 @@ const useActiveSection = (ids: string[]) => {
   return active;
 };
 
+/** True once the page is scrolled past `y`. Re-renders only when that flips, never per scroll event. */
+const useScrolledPast = (y: number) => {
+  const [past, setPast] = useState(false);
+  useEffect(() => {
+    let current = window.scrollY > y;
+    setPast(current);
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        const next = window.scrollY > y;
+        if (next !== current) {
+          current = next;
+          setPast(next);
+        }
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [y]);
+  return past;
+};
+
 const useLockScroll = (locked: boolean) => {
   useEffect(() => {
     if (!locked) return;
@@ -130,18 +155,40 @@ const useLockScroll = (locked: boolean) => {
   }, [locked]);
 };
 
+// One shared observer for every reveal. The fade/slide itself is a CSS transition
+// (see .reveal in index.css), so it runs on the compositor instead of per-frame JS.
+const revealObserver =
+  typeof window !== 'undefined' && 'IntersectionObserver' in window
+    ? new IntersectionObserver(
+        (entries) =>
+          entries.forEach((e) => {
+            if (!e.isIntersecting) return;
+            e.target.classList.add('is-in');
+            revealObserver?.unobserve(e.target);
+          }),
+        { rootMargin: '0px 0px -60px 0px' },
+      )
+    : null;
+
 type RevealProps = { children: ReactNode; delay?: number; className?: string; key?: string };
-const Reveal = ({ children, delay = 0, className = '' }: RevealProps) => (
-  <motion.div
-    initial={{ opacity: 0, y: 28 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true, margin: '-60px' }}
-    transition={{ duration: 0.9, delay, ease: EASE }}
-    className={className}
-  >
-    {children}
-  </motion.div>
-);
+const Reveal = ({ children, delay = 0, className = '' }: RevealProps) => {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (!revealObserver) {
+      el.classList.add('is-in');
+      return;
+    }
+    revealObserver.observe(el);
+    return () => revealObserver.unobserve(el);
+  }, []);
+  return (
+    <div ref={ref} className={`reveal ${className}`} style={{ '--reveal-delay': `${delay}s` } as CSSProperties}>
+      {children}
+    </div>
+  );
+};
 
 const SectionHeading = ({ eyebrow, title, accent, light = false }: { eyebrow: string; title: string; accent: string; light?: boolean }) => (
   <Reveal>
@@ -194,17 +241,11 @@ const OpenBadge = ({ dark = false }: { dark?: boolean }) => {
 const SECTION_IDS = ['top', 'about', 'services', 'clinic', 'reviews', 'booking', 'visit'];
 
 const Navbar = () => {
-  const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const active = useActiveSection(SECTION_IDS);
   useLockScroll(open);
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  const scrolled = useScrolledPast(24);
 
   return (
     <>
@@ -212,12 +253,12 @@ const Navbar = () => {
         <nav
           className={`mx-auto flex items-center justify-between transition-all duration-500 ease-out rounded-full ${
             scrolled
-              ? 'max-w-5xl h-16 pl-5 pr-2 bg-ivory/80 backdrop-blur-xl border border-line shadow-[var(--shadow-lift)]'
+              ? 'max-w-5xl h-16 pl-5 pr-2 bg-ivory/90 backdrop-blur-md border border-line shadow-[var(--shadow-lift)]'
               : 'max-w-7xl h-[72px] pl-3 pr-1 sm:px-5 bg-transparent border border-transparent'
           }`}
         >
           <a href="#top" aria-label="ABCD Beauty Clinic home" className="shrink-0">
-            <img src="/images/logo-mark.png" alt="ABCD Beauty Clinic" className={`w-auto transition-all duration-500 ${scrolled ? 'h-8' : 'h-9 md:h-10'}`} />
+            <img decoding="async" src="/images/logo-mark.png" alt="ABCD Beauty Clinic" className={`w-auto transition-[height] duration-500 ${scrolled ? 'h-8' : 'h-9 md:h-10'}`} />
           </a>
 
           <div className="hidden lg:flex items-center gap-1">
@@ -259,7 +300,7 @@ const Navbar = () => {
             className="fixed inset-0 z-[95] bg-plum text-ivory flex flex-col lg:hidden"
           >
             <div className="h-[84px] px-6 flex items-center justify-between">
-              <img src="/images/logo-white.png" alt="ABCD Beauty Clinic" className="h-9 w-auto" />
+              <img decoding="async" src="/images/logo-white.png" alt="ABCD Beauty Clinic" className="h-9 w-auto" />
               <button onClick={() => setOpen(false)} className="w-12 h-12 rounded-full bg-ivory/10 flex items-center justify-center" aria-label="Close menu">
                 <X size={22} />
               </button>
@@ -299,7 +340,7 @@ const Navbar = () => {
 const Hero = () => (
   <section id="top" className="relative pt-28 md:pt-36 pb-16 md:pb-24 overflow-hidden">
     {/* soft brand wash */}
-    <div aria-hidden className="pointer-events-none absolute -top-40 right-[-10%] w-[60vw] h-[60vw] max-w-[820px] max-h-[820px] rounded-full bg-lilac-light/70 blur-[120px]" />
+    <div aria-hidden className="pointer-events-none absolute -top-40 right-[-10%] w-[60vw] h-[60vw] max-w-[820px] max-h-[820px] rounded-full bg-[radial-gradient(closest-side,rgba(233,224,241,0.85),rgba(233,224,241,0))]" />
     <div className="relative max-w-7xl mx-auto px-5 lg:px-10 grid lg:grid-cols-12 gap-12 lg:gap-10 items-center">
       <div className="lg:col-span-6">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE }}>
@@ -368,7 +409,7 @@ const Hero = () => (
       >
         <div className="relative ml-auto w-[86%] sm:w-[72%] lg:w-[80%]">
           <div className="arch aspect-[3/4] bg-paper shadow-[var(--shadow-lift)]">
-            <img src={IMG.studio} alt="Ladies’ styling studio at ABCD Beauty Clinic" fetchPriority="high" className="w-full h-full object-cover object-[35%_50%]" />
+            <img decoding="async" src={IMG.studio} alt="Ladies’ styling studio at ABCD Beauty Clinic" fetchPriority="high" className="w-full h-full object-cover object-[35%_50%]" />
           </div>
 
           <motion.div
@@ -377,14 +418,14 @@ const Hero = () => (
             transition={{ duration: 1, delay: 0.7, ease: EASE }}
             className="absolute -left-[22%] sm:-left-[26%] bottom-[12%] w-[50%] rounded-[var(--radius-media)] overflow-hidden ring-[6px] ring-ivory shadow-[var(--shadow-lift)]"
           >
-            <img src={IMG.suiteSm} alt="Treatment suite" className="w-full aspect-square object-cover" />
+            <img decoding="async" src={IMG.suiteSm} alt="Treatment suite" className="w-full aspect-square object-cover" />
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.9, ease: EASE }}
-            className="absolute -right-2 sm:-right-6 top-[14%] rounded-2xl bg-white/90 backdrop-blur-md border border-white px-4 py-3.5 shadow-[var(--shadow-lift)]"
+            className="absolute -right-2 sm:-right-6 top-[14%] rounded-2xl bg-white/95 border border-white px-4 py-3.5 shadow-[var(--shadow-lift)]"
           >
             <p className="text-[11px] uppercase tracking-[0.16em] text-muted">Clinics</p>
             <p className="font-serif text-2xl text-plum leading-tight mt-0.5">Kanhangad<br />& Cherkala</p>
@@ -407,11 +448,21 @@ const Hero = () => (
 
 const Ticker = () => {
   const words = ['Hair', 'Skin', 'Clinical care', 'Bridal', 'Grooming', 'Nails', 'Korean aesthetics', 'Kids'];
-  const row = [...words, ...words, ...words, ...words];
+  // Two copies are enough for a seamless -50% loop; the animation pauses while off-screen.
+  const row = [...words, ...words];
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => setVisible(e.isIntersecting));
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
   return (
-    <div className="px-3 sm:px-5" aria-hidden="true">
+    <div ref={ref} className="px-3 sm:px-5" aria-hidden="true">
       <div className="rounded-full bg-paper border border-line py-4 overflow-hidden">
-        <div className="flex w-max animate-marquee">
+        <div className="flex w-max animate-marquee" style={{ animationPlayState: visible ? 'running' : 'paused' }}>
           {row.map((w, i) => (
             <span key={i} className="font-serif italic text-2xl md:text-[1.9rem] text-plum/75 px-7 flex items-center gap-14 whitespace-nowrap">
               {w} <span className="text-lilac text-sm not-italic">✦</span>
@@ -429,7 +480,7 @@ const About = () => (
       <Reveal className="lg:col-span-5 order-2 lg:order-1">
         <div className="relative">
           <div className="aspect-[4/5] rounded-[2rem] overflow-hidden bg-paper shadow-[var(--shadow-lift)]">
-            <img src={IMG.reception} alt="Reception and kids’ corner at ABCD Beauty Clinic" loading="lazy" className="w-full h-full object-cover object-[62%_50%]" />
+            <img decoding="async" src={IMG.reception} alt="Reception and kids’ corner at ABCD Beauty Clinic" loading="lazy" className="w-full h-full object-cover object-[62%_50%]" />
           </div>
           <div className="absolute -bottom-6 left-6 right-6 sm:left-auto sm:-right-8 sm:w-60 card p-5">
             <p className="font-serif text-5xl text-plum leading-none">2018</p>
@@ -452,10 +503,12 @@ const About = () => (
             { icon: Sparkles, t: 'Precision', d: 'Specialists for hair, skin and clinical care.' },
             { icon: HeartHandshake, t: 'Hospitality', d: 'Unhurried, friendly care — for her, him and kids.' },
           ].map(({ icon: Icon, t, d }, i) => (
-            <Reveal key={t} delay={0.08 * i} className="card p-6 hover:-translate-y-1 hover:shadow-[var(--shadow-lift)] transition-all duration-500">
-              <span className="w-11 h-11 rounded-2xl bg-lilac-light text-lilac-deep flex items-center justify-center"><Icon size={20} /></span>
-              <h3 className="font-serif text-[1.6rem] mt-5 text-plum leading-none">{t}</h3>
-              <p className="text-sm text-muted mt-2.5 leading-relaxed">{d}</p>
+            <Reveal key={t} delay={0.08 * i}>
+              <div className="card h-full p-6 hover:-translate-y-1 hover:shadow-[var(--shadow-lift)] transition-[translate,box-shadow] duration-500">
+                <span className="w-11 h-11 rounded-2xl bg-lilac-light text-lilac-deep flex items-center justify-center"><Icon size={20} /></span>
+                <h3 className="font-serif text-[1.6rem] mt-5 text-plum leading-none">{t}</h3>
+                <p className="text-sm text-muted mt-2.5 leading-relaxed">{d}</p>
+              </div>
             </Reveal>
           ))}
         </div>
@@ -477,7 +530,7 @@ const ServiceDrawer = ({ service, onClose, onBook }: { service: ServiceCategory 
     <AnimatePresence>
       {service && (
         <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-label={`${service.title} price list`}>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-plum/40 backdrop-blur-sm" />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-plum/50" />
           <motion.aside
             initial={{ x: '105%' }}
             animate={{ x: 0 }}
@@ -486,13 +539,13 @@ const ServiceDrawer = ({ service, onClose, onBook }: { service: ServiceCategory 
             className="absolute right-0 sm:right-3 top-0 sm:top-3 bottom-0 sm:bottom-3 w-full sm:max-w-[34rem] bg-ivory sm:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl"
           >
             <div className="relative h-60 shrink-0 m-3 rounded-[1.5rem] overflow-hidden">
-              <img src={service.image} alt="" className="w-full h-full object-cover" />
+              <img decoding="async" src={service.image} alt="" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-plum/80 via-plum/10 to-transparent" />
-              <button onClick={onClose} className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/90 backdrop-blur text-plum flex items-center justify-center hover:bg-white" aria-label="Close">
+              <button onClick={onClose} className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/95 text-plum flex items-center justify-center hover:bg-white" aria-label="Close">
                 <X size={20} />
               </button>
               <div className="absolute bottom-5 left-6 right-6 text-ivory">
-                <span className="inline-flex rounded-full bg-white/15 backdrop-blur px-3 h-7 items-center text-[11px] uppercase tracking-[0.18em]">{service.audience === 'her' ? 'For her' : 'For him'}</span>
+                <span className="inline-flex rounded-full bg-plum/45 px-3 h-7 items-center text-[11px] uppercase tracking-[0.18em]">{service.audience === 'her' ? 'For her' : 'For him'}</span>
                 <h3 className="font-serif text-[2.6rem] leading-none mt-3">{service.title}</h3>
               </div>
             </div>
@@ -592,11 +645,11 @@ const Services = ({ onBook }: { onBook: (service: string) => void }) => {
                   <button
                     key={s.id}
                     onClick={() => setSelected(s)}
-                    className={`group text-left card p-2.5 hover:-translate-y-1.5 hover:shadow-[var(--shadow-lift)] transition-all duration-500 ${wide ? 'sm:col-span-2 lg:col-span-3 lg:grid lg:grid-cols-[2fr_1fr] lg:items-center lg:gap-4' : ''}`}
+                    className={`group text-left card p-2.5 hover:-translate-y-1.5 hover:shadow-[var(--shadow-lift)] transition-[translate,box-shadow] duration-500 ${wide ? 'sm:col-span-2 lg:col-span-3 lg:grid lg:grid-cols-[2fr_1fr] lg:items-center lg:gap-4' : ''}`}
                   >
                     <div className={`relative overflow-hidden rounded-[1.35rem] bg-lilac-light aspect-[4/3] ${wide ? 'lg:aspect-[2.4/1]' : ''}`}>
-                      <img src={s.image} alt={s.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-[1.4s] ease-out group-hover:scale-[1.06]" />
-                      <span className="absolute top-3 left-3 rounded-full bg-white/90 backdrop-blur text-plum text-[12px] font-semibold px-3 h-8 inline-flex items-center">
+                      <img decoding="async" src={s.image} alt={s.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-[1.4s] ease-out group-hover:scale-[1.06]" />
+                      <span className="absolute top-3 left-3 rounded-full bg-white/95 text-plum text-[12px] font-semibold px-3 h-8 inline-flex items-center">
                         From {s.from}
                       </span>
                     </div>
@@ -648,7 +701,7 @@ const Specialists = () => (
         {SPECIALISTS.map((s, i) => (
           <Reveal key={s.title} delay={0.08 * i}>
             <div className="group h-full rounded-[var(--radius-card)] bg-plum text-ivory p-8 relative overflow-hidden">
-              <div aria-hidden className="absolute -right-16 -top-16 w-48 h-48 rounded-full bg-lilac/15 blur-2xl transition-transform duration-700 group-hover:scale-125" />
+              <div aria-hidden className="absolute -right-16 -top-16 w-48 h-48 rounded-full bg-[radial-gradient(closest-side,rgba(179,156,203,0.22),rgba(179,156,203,0))] transition-transform duration-700 group-hover:scale-125" />
               <span className="relative font-serif text-[4.5rem] leading-none text-lilac/70">0{i + 1}</span>
               <h3 className="relative font-serif text-[2rem] mt-8 leading-none">{s.title}</h3>
               <p className="relative text-[14.5px] text-ivory/65 mt-3 leading-relaxed">{s.description}</p>
@@ -676,7 +729,7 @@ const Lightbox = ({ items, index, onClose, onNav }: { items: { src: string; titl
   return (
     <AnimatePresence>
       {index !== null && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[120] bg-[#120B17]/95 backdrop-blur-md flex flex-col" role="dialog" aria-modal="true">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[120] bg-[#120B17]/95 flex flex-col" role="dialog" aria-modal="true">
           <div className="flex items-center justify-between p-4 sm:p-6 text-ivory">
             <p className="font-serif text-2xl">{items[index].title}</p>
             <button onClick={onClose} className="w-12 h-12 rounded-full bg-ivory/10 hover:bg-ivory/20 flex items-center justify-center" aria-label="Close">
@@ -728,14 +781,14 @@ const Clinic = () => {
           {spaces.map((s, i) => (
             <Reveal key={s.title} delay={0.08 * i} className={i === 0 ? 'md:col-span-7 md:row-span-2' : 'md:col-span-5'}>
               <button onClick={() => setIdx(i)} className="group relative block w-full h-full min-h-[240px] rounded-[var(--radius-card)] overflow-hidden bg-paper text-left">
-                <img src={s.src} alt={s.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1.4s] ease-out group-hover:scale-[1.05]" />
+                <img decoding="async" src={s.src} alt={s.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1.4s] ease-out group-hover:scale-[1.05]" />
                 <div className="absolute inset-0 bg-gradient-to-t from-plum/70 via-transparent to-transparent" />
                 <div className="absolute left-5 right-5 bottom-5 flex items-end justify-between gap-4 text-ivory">
                   <div>
                     <p className="font-serif text-[1.9rem] leading-none">{s.title}</p>
                     <p className="text-[13px] text-ivory/75 mt-1.5">{s.note}</p>
                   </div>
-                  <span className="w-11 h-11 rounded-full bg-white/20 backdrop-blur flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                  <span className="w-11 h-11 rounded-full bg-plum/40 flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
                     <Expand size={17} />
                   </span>
                 </div>
@@ -987,7 +1040,7 @@ const Visit = () => {
           <div className="grid lg:grid-cols-12 gap-4">
             <Reveal className="lg:col-span-7 lg:row-span-2">
               <div className="h-full min-h-[340px] rounded-[var(--radius-card)] overflow-hidden border border-line bg-lilac-light relative">
-                <iframe title="Map to ABCD Beauty Clinic, Kanhangad" src={MAP_EMBED} loading="lazy" referrerPolicy="no-referrer-when-downgrade" className="absolute inset-0 w-full h-full grayscale-[35%] contrast-[1.05]" />
+                <iframe title="Map to ABCD Beauty Clinic, Kanhangad" src={MAP_EMBED} loading="lazy" referrerPolicy="no-referrer-when-downgrade" className="absolute inset-0 w-full h-full" />
               </div>
             </Reveal>
             <div className="lg:col-span-5 grid sm:grid-cols-2 lg:grid-cols-1 gap-4">
@@ -1068,7 +1121,7 @@ const CtaBanner = () => (
   <section className="px-3 sm:px-5 pb-3 sm:pb-5">
     <Reveal>
       <div className="relative rounded-[2.5rem] overflow-hidden min-h-[460px] flex items-end">
-        <img src={IMG.studio} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+        <img decoding="async" src={IMG.studio} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-r from-plum/95 via-plum/75 to-plum/20" />
         <div className="relative w-full max-w-7xl mx-auto px-6 lg:px-10 py-14 md:py-20 grid md:grid-cols-12 gap-8 items-end">
           <div className="md:col-span-7 text-ivory">
@@ -1105,7 +1158,7 @@ const Footer = ({ onOpenAdmin, onOpenPrivacy, onOpenTerms }: { onOpenAdmin: () =
         <div className="max-w-7xl mx-auto px-6 lg:px-10">
           <div className="grid md:grid-cols-12 gap-10 pb-14 border-b border-ivory/10">
             <div className="md:col-span-5">
-              <img src="/images/logo-white.png" alt="ABCD Beauty Clinic" className="h-11 w-auto opacity-90" />
+              <img decoding="async" src="/images/logo-white.png" alt="ABCD Beauty Clinic" className="h-11 w-auto opacity-90" />
               <p className="mt-7 font-serif text-[2rem] leading-[1.15] text-ivory/90 max-w-sm">Beauty and confidence in Kanhangad & Cherkala, since 2018.</p>
             </div>
             <div className="md:col-span-2">
@@ -1149,13 +1202,7 @@ const Footer = ({ onOpenAdmin, onOpenPrivacy, onOpenTerms }: { onOpenAdmin: () =
 
 /** Desktop: floating WhatsApp button. Mobile: thumb-friendly action bar. */
 const QuickActions = () => {
-  const [show, setShow] = useState(false);
-  useEffect(() => {
-    const onScroll = () => setShow(window.scrollY > 500);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  const show = useScrolledPast(500);
 
   return (
     <>
@@ -1169,7 +1216,7 @@ const QuickActions = () => {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
             transition={{ duration: 0.4, ease: EASE }}
-            className="md:hidden fixed bottom-3 inset-x-3 z-[90] rounded-full bg-plum/95 backdrop-blur-xl p-1.5 grid grid-cols-[auto_auto_1fr] gap-1.5 shadow-[0_20px_40px_-12px_rgba(42,27,51,0.6)]"
+            className="md:hidden fixed bottom-3 inset-x-3 z-[90] rounded-full bg-plum p-1.5 grid grid-cols-[auto_auto_1fr] gap-1.5 shadow-[0_20px_40px_-12px_rgba(42,27,51,0.6)]"
             style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
           >
             <a href={PHONE_TEL} aria-label="Call" className="w-12 h-12 rounded-full bg-ivory/10 text-ivory flex items-center justify-center"><Phone size={19} /></a>
