@@ -1,54 +1,75 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Poppins", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-display: "DM Serif Display", serif;
-  
-  --color-lavender-50: #F5F0FF;
-  --color-lavender-100: #EDE5FF;
-  --color-lavender-200: #D8C8FF;
-  --color-lavender-300: #BC9EFF;
-  --color-lavender-400: #9D6EFF;
-  --color-lavender-500: #8045F5;
-  --color-lavender-600: #6B28E8;
-  --color-lavender-700: #5518C8;
-  --color-purple-deep: #2D1B69;
-  --color-purple-darker: #1A0F3F;
-  --color-purple-ink: #0E0820;
+  --font-sans: "Manrope", "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Instrument Serif", Georgia, serif;
+
+  /* Brand — taken from the ABCD logo lavender (#B39CCB) */
+  --color-ivory: #FBF8F5;
+  --color-paper: #F4EFF6;
+  --color-line: #E7DFEB;
+  --color-plum: #2A1B33;
+  --color-plum-soft: #4B3560;
+  --color-lilac: #B39CCB;
+  --color-lilac-deep: #7D60A2;
+  --color-lilac-light: #E9E0F1;
+  --color-brass: #B08D57;
+  --color-muted: #6E6276;
+
+  /* Legacy tokens kept for the admin panel + legal pages */
+  --color-mist: #F4EFF6;
+  --color-lavender-50: #F6F1FA;
+  --color-lavender-100: #E9E0F1;
+  --color-lavender-200: #D9CBE6;
+  --color-lavender-300: #C3AFD8;
+  --color-lavender-400: #B39CCB;
+  --color-lavender-500: #9479B8;
+  --color-lavender-600: #7D60A2;
+  --color-lavender-700: #644886;
+  --color-lavender-900: #3A2650;
+  --color-purple-deep: #2A1B33;
+  --color-purple-darker: #1E1326;
+  --color-purple-ink: #170E1D;
 }
 
 @layer base {
+  html { scroll-behavior: smooth; scroll-padding-top: 88px; }
   body {
-    @apply bg-[#F8F5FF] text-[#2D1B69] antialiased selection:bg-lavender-200 selection:text-purple-ink;
-    font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+    @apply bg-ivory text-plum antialiased;
   }
+  ::selection { background: #E9E0F1; color: #2A1B33; }
 }
 
-.apple-glass {
-  @apply bg-white/70 backdrop-blur-xl border border-white/20;
+/* Arch-topped frames — echo the arched niches inside the clinic */
+.arch { border-radius: 999px 999px 6px 6px; overflow: hidden; }
+
+.eyebrow {
+  @apply text-[11px] font-semibold uppercase tracking-[0.28em] text-lilac-deep;
 }
 
-.apple-text-gradient {
-  @apply bg-clip-text text-transparent bg-gradient-to-b from-purple-deep to-lavender-600;
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-3 bg-plum text-ivory px-7 py-4 text-sm font-semibold tracking-wide transition-colors hover:bg-lilac-deep;
+}
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-3 border border-plum/20 text-plum px-7 py-4 text-sm font-semibold tracking-wide transition-colors hover:border-plum hover:bg-plum hover:text-ivory;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  @apply bg-lavender-200 rounded-full;
-}
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-lavender-300;
+.field {
+  @apply w-full bg-transparent border-0 border-b border-plum/20 px-0 py-3 text-base text-plum placeholder:text-plum/35 focus:outline-none focus:border-lilac-deep transition-colors;
 }
 
-/* Modal specific animation */
-.modal-overlay {
-  background: rgba(14, 8, 32, 0.4);
-  backdrop-filter: blur(8px);
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #D9CBE6; border-radius: 8px; }
+
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.animate-marquee { animation: marquee 45s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee { animation: none; }
+  html { scroll-behavior: auto; }
 }

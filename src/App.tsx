@@ -3,1000 +3,882 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useRef, FormEvent } from 'react';
-import { motion, AnimatePresence, useScroll, useTransform } from 'motion/react';
-import { 
-  Scissors, 
-  Sparkles, 
-  Palette, 
-  Droplet, 
-  Eye, 
-  Smile, 
-  Moon, 
-  Star,
+import { useState, useEffect, FormEvent, ReactNode } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import {
   MapPin,
   Phone,
-  Clock,
   Instagram,
   ArrowRight,
+  ArrowUpRight,
   ChevronLeft,
-  ChevronRight,
   X,
   CheckCircle2,
   Lock,
   Calendar,
   LogOut,
-  Trash2
+  Trash2,
+  Menu,
 } from 'lucide-react';
 import { db, auth, googleProvider } from './lib/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
+import { SERVICES, ServiceCategory } from './data/menu';
 
-// --- Constants & Types ---
+// --- Constants ---
 
-const logoOfficial = "/images/logo.png";
-const hero1 = "/images/hero1.png";
-const hero2 = "/images/hero2.png";
-const hero3 = "/images/hero3.png";
+const PHONE_DISPLAY = '062385 70877';
+const PHONE_TEL = 'tel:+916238570877';
+const WHATSAPP = 'https://wa.me/916238570877';
+const INSTAGRAM = 'https://www.instagram.com/abcdbeautyclinic';
+const MAPS_KANHANGAD = 'https://www.google.com/maps/search/?api=1&query=ABCD+Beauty+Clinic+Kanhangad+Kerala';
+const MAPS_CHERKALA = 'https://www.google.com/maps/search/?api=1&query=ABCD+Beauty+Clinic+Cherkala+Kasaragod';
+
+const IMG = {
+  studio: '/images/hero1.webp',
+  suite: '/images/hero2.webp',
+  reception: '/images/hero3.webp',
+  studioSm: '/images/hero1-sm.webp',
+  suiteSm: '/images/hero2-sm.webp',
+  receptionSm: '/images/hero3-sm.webp',
+};
 
 const ADMIN_EMAILS = ['niiaaall2@gmail.com'];
 
 const NAVIGATION = [
   { name: 'About', href: '#about' },
   { name: 'Services', href: '#services' },
-  { name: 'Reviews', href: '#testimonials' },
-  { name: 'Find Us', href: '#findus' },
-];
-
-const SERVICES = [
-  {
-    id: 'hair-ladies',
-    title: 'Hair Services (Ladies)',
-    description: 'From precision cuts to high-fashion colors and restorative treatments.',
-    icon: Scissors,
-    image: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=800&q=80',
-    price: '₹300+',
-    subcategories: [
-      {
-        name: 'Hair Cutting',
-        items: [
-          { name: 'U Cut', price: '₹400' },
-          { name: 'V Cut', price: '₹400' },
-          { name: 'Straight Cut', price: '₹300' },
-          { name: 'Layer Cut (with wash)', price: '₹600' },
-          { name: 'Step Cut (with wash)', price: '₹600' },
-          { name: 'Feathered Cut (with wash)', price: '₹700' },
-          { name: 'Bob Cut', price: '₹700' },
-          { name: 'Pixie Cut', price: '₹800' }
-        ]
-      },
-      {
-        name: 'Hair Colouring',
-        items: [
-          { name: 'Global Hair Colour (Grey coverage)', price: '₹2200+' },
-          { name: 'Root Touch-Up', price: '₹1500' },
-          { name: 'Highlights (per strip)', price: '₹300' },
-          { name: 'Balayage', price: '₹4000+' }
-        ]
-      },
-      {
-        name: 'Chemical Treatments',
-        items: [
-          { name: 'Smoothening', price: '₹4000 to ₹10,000' },
-          { name: 'Keratin Treatment', price: '₹6000+' },
-          { name: 'Botox Treatment', price: '₹7000+' }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'skin-ladies',
-    title: 'Skin Care (Ladies)',
-    description: 'Nourishing facials, clean-ups, and skin-specific treatments.',
-    icon: Smile,
-    image: 'https://images.unsplash.com/photo-1512290923902-8a9f81dc2069?w=800&q=80',
-    price: '₹500+',
-    subcategories: [
-      {
-        name: 'Facials',
-        items: [
-          { name: 'Basic Facial', price: '₹1500' },
-          { name: 'Premium Facial', price: '₹2500' },
-          { name: 'Luxury / Hydra Facial', price: '₹4000' }
-        ]
-      },
-      {
-        name: 'Cleanup & De-Tan',
-        items: [
-          { name: 'Cleanup Basic', price: '₹600' },
-          { name: 'De-Tan Basic', price: '₹500' },
-          { name: 'Face Massage (20 mins)', price: '₹800+' }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'advanced-clinical',
-    title: 'Clinical Treatments',
-    description: 'Advanced aesthetic and medical-grade skin and hair treatments.',
-    icon: Sparkles,
-    image: 'https://images.unsplash.com/photo-1594465919760-441fe540f1f5?w=800&q=80',
-    price: '₹1500+',
-    subcategories: [
-      {
-        name: 'Advanced Skin',
-        items: [
-          { name: 'Carbon Laser Toning', price: '₹6000' },
-          { name: 'IPL Photo Laser', price: '₹5500' },
-          { name: 'Microneedling', price: '₹6000' },
-          { name: 'BB Glow Treatment', price: '₹6000' }
-        ]
-      },
-      {
-        name: 'Aesthetic',
-        items: [
-          { name: 'Microblading', price: '₹10,000' },
-          { name: 'Lip Neutralizing', price: '₹4000' },
-          { name: 'Beauty Spot', price: '₹500' }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'bridal-packages',
-    title: 'Bridal & Combos',
-    description: 'Curated beauty packages for your most special day.',
-    icon: Moon,
-    image: 'https://images.unsplash.com/photo-1595152271333-5c02613ce991?w=800&q=80',
-    price: '₹5,999+',
-    subcategories: [
-      {
-        name: 'Packages',
-        items: [
-          { name: 'Silver Package', price: '₹5,999' },
-          { name: 'Platinum Package', price: '₹9,999' },
-          { name: 'Diamond Package', price: '₹14,999' }
-        ]
-      },
-      {
-        name: 'Special Services',
-        items: [
-          { name: 'Bridal Makeup', price: 'Consultation' },
-          { name: 'Photography/Events', price: 'Custom' }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'kids-hair',
-    title: 'Kids Services',
-    description: 'Gentle and stylish hair services for our youngest clients.',
-    icon: Star,
-    image: 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=800&q=80',
-    price: '₹200+',
-    subcategories: [
-      {
-        name: 'Hair Cuts',
-        items: [
-          { name: 'Layer / Bob Cut', price: '₹500+' },
-          { name: 'Butterfly / Feather', price: '₹700' },
-          { name: 'Baby Cut', price: '₹300' }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'mani-pedi',
-    title: 'Mani & Pedi',
-    description: 'Indulgent hand and foot care from basic grooming to premium luxury.',
-    icon: Droplet,
-    image: 'https://images.unsplash.com/photo-1519415510236-855bc7bd4064?w=800&q=80',
-    price: '₹500+',
-    subcategories: [
-      {
-        name: 'Treatments',
-        items: [
-          { name: 'Ordinary Mani/Pedi', price: '₹500/₹900' },
-          { name: 'Classic Mani/Pedi', price: '₹700/₹1300' },
-          { name: 'Premium Mani/Pedi', price: '₹1500/₹2000' }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'waxing',
-    title: 'Waxing Services',
-    description: 'Smooth results with Regular and Premium Rica wax options.',
-    icon: Sparkles,
-    image: 'https://images.unsplash.com/photo-1560750588-73207b1ef5b8?w=800&q=80',
-    price: '₹150+',
-    subcategories: [
-      {
-        name: 'Body Waxing',
-        items: [
-          { name: 'Full Arm / Leg', price: '₹800/₹1200' },
-          { name: 'Full Body', price: '₹4000' }
-        ]
-      },
-      {
-        name: 'Face (Rica)',
-        items: [
-          { name: 'Upper Lip / Chin', price: '₹150' },
-          { name: 'Forehead / Side Lock', price: '₹150' },
-          { name: 'Full Face', price: '₹500' }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'makeup-events',
-    title: 'Makeup & Events',
-    description: 'Professional makeup for weddings, parties, and special occasions.',
-    icon: Palette,
-    image: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=800&q=80',
-    price: 'Custom',
-    subcategories: [
-      {
-        name: 'Makeup',
-        items: [
-          { name: 'Bridal Makeup', price: 'Requirement base' },
-          { name: 'Party Makeup', price: 'Requirement base' },
-          { name: 'Reception Makeup', price: 'Requirement base' }
-        ]
-      },
-      {
-        name: 'Special Event Packages',
-        items: [
-          { name: 'Bridal Makeover', price: 'Custom' },
-          { name: 'Costume & Events', price: 'Custom' },
-          { name: 'Photography/Video', price: 'Custom' }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'mens-hair-grooming',
-    title: 'Men\'s Hair & Grooming',
-    description: 'Precision cuts, beard styling, and advanced textures for the modern man.',
-    icon: Scissors,
-    image: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&q=80',
-    price: '₹200+',
-    subcategories: [
-      {
-        name: 'Classic & Luxury',
-        items: [
-          { name: 'Classic Haircut', price: '₹200' },
-          { name: 'Beard Trimming / Shave', price: '₹150+' },
-          { name: 'Haircut + Shaving (Wash)', price: '₹450' },
-          { name: 'Beard Styling', price: '₹200' },
-          { name: 'Luxury Grooming Combo', price: '₹600+' }
-        ]
-      },
-      {
-        name: 'Chemical & Scalp',
-        items: [
-          { name: 'Anti-Dandruff / Scalp Spa', price: '₹800+' },
-          { name: 'Hair Smoothening / Keratin', price: '₹3500+' },
-          { name: 'Hair / Beard Colouring', price: '₹600+' },
-          { name: 'Fashion Colour / Highlights', price: '₹1200+' },
-          { name: 'Head Massage (Oil/Normal)', price: '₹300+' }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'mens-skin-aesthetic',
-    title: 'Men\'s Skin & Aesthetics',
-    description: 'Dermatological innovation meeting clinical precision for male skin health.',
-    icon: Sparkles,
-    image: 'https://images.unsplash.com/photo-1621607512214-68297480165e?w=800&q=80',
-    price: '₹600+',
-    subcategories: [
-      {
-        name: 'Clinical Skin',
-        items: [
-          { name: 'Basic / Glow Cleanup', price: '₹600 / ₹1200' },
-          { name: 'Premium Facial / Hydra', price: '₹2500 / ₹4500' },
-          { name: 'Carbon Laser Toning', price: '₹6000' },
-          { name: 'IPL Photo Facial / Hair Removal', price: 'Custom' },
-          { name: 'Microneedling (Face/Hair)', price: '₹6000' }
-        ]
-      },
-      {
-        name: 'Cosmetic Services',
-        items: [
-          { name: 'Microblading / Shading', price: '₹10,000+' },
-          { name: 'Lip Neutralizing / Colour', price: '₹4000+' },
-          { name: 'Tattoo Removal', price: 'Consultation' },
-          { name: 'Saggy Skin Tightening', price: '₹3500+' }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'mens-packages-makeup',
-    title: 'Men\'s Packages & Events',
-    description: 'Complete transformation packages and specialized groom styling for events.',
-    icon: Moon,
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80',
-    price: '₹2,500+',
-    subcategories: [
-      {
-        name: 'Transformation Packages',
-        items: [
-          { name: 'Glow Groom Package', price: '₹2500+' },
-          { name: 'Booster Glow Up', price: '₹4000+' },
-          { name: 'Gold Glow Up (Total Transform)', price: '₹7500+' }
-        ]
-      },
-      {
-        name: 'Professional Styling',
-        items: [
-          { name: 'Groom / Night Reception Makeup', price: '₹3000+' },
-          { name: 'Nikkah / Special Event Makeup', price: '₹4000+' },
-          { name: 'Costume Styling & Makeover', price: 'Custom' }
-        ]
-      }
-    ]
-  }
+  { name: 'The Clinic', href: '#clinic' },
+  { name: 'Reviews', href: '#reviews' },
+  { name: 'Visit', href: '#visit' },
 ];
 
 const SPECIALISTS = [
   {
-    title: "Hair Specialists",
-    description: "Master stylists specializing in precision cutting, clinical smoothening, and advanced ammonia-free transformations.",
-    icon: Scissors,
-    tag: "Artistry"
+    title: 'Hair Specialists',
+    description: 'Stylists trained in precision cutting, smoothening and ammonia-free colour work.',
   },
   {
-    title: "Skin Experts",
-    description: "Certified professionals providing advanced hydra-facials, chemical peels, and restorative biological skin treatments.",
-    icon: Sparkles,
-    tag: "Clinical"
+    title: 'Skin Experts',
+    description: 'Certified therapists for hydra-facials, peels and Korean-inspired clinical skin care.',
   },
   {
-    title: "Professional Beauticians",
-    description: "Experts in traditional and contemporary bridal makeup, saree draping, and meticulous aesthetic refinement.",
-    icon: Palette,
-    tag: "Precision"
-  }
+    title: 'Beauticians',
+    description: 'Bridal and occasion makeup, saree draping and detailed aesthetic finishing.',
+  },
 ];
 
 const TESTIMONIALS = [
   {
-    name: "Thasneem Mohammad",
-    text: "The smoothening was so perfect — I couldn't believe how silky my hair felt. Staffs are very helpful and caring. Had a wonderful time and will definitely be back.",
-    staff: "Soumya",
-    rating: 4.8
+    name: 'Thasneem Mohammad',
+    text: 'The smoothening was so perfect — I couldn’t believe how silky my hair felt. Staff are very helpful and caring. Will definitely be back.',
   },
   {
-    name: "Haseena M C",
-    text: "Absolutely thrilled! The salon's pristine ambiance was wonderful. Hair colour service was exceptional — especially Uvais's work!",
-    staff: "Uvais",
-    rating: 4.9
+    name: 'Haseena M C',
+    text: 'Absolutely thrilled! The salon’s pristine ambiance was wonderful. Hair colour service was exceptional — especially Uvais’s work.',
   },
   {
-    name: "Aysha Kasim",
-    text: "ABCD is the most comfortable salon for me. Sandhya is very friendly and kind. This is my forever salon — will recommend to everyone!",
-    staff: "Sandhya",
-    rating: 4.7
+    name: 'Aysha Kasim',
+    text: 'ABCD is the most comfortable salon for me. Sandhya is very friendly and kind. This is my forever salon — I’ll recommend it to everyone.',
   },
   {
-    name: "Nawaz Muhammed",
-    text: "Totally satisfied by Asif's work and customer service. They really take care of you. 100% worth it.",
-    staff: "Asif",
-    rating: 4.4
+    name: 'Nawaz Muhammed',
+    text: 'Totally satisfied by Asif’s work and customer service. They really take care of you. 100% worth it.',
   },
   {
-    name: "Fathimath Nafila",
-    text: "Amazing hospitality and service. Shaan did my hair — he is genuinely a perfectionist. Definitely suggesting to my friends.",
-    staff: "Shaan",
-    rating: 4.9
+    name: 'Fathimath Nafila',
+    text: 'Amazing hospitality and service. Shaan did my hair — he is genuinely a perfectionist. Definitely suggesting it to my friends.',
   },
   {
-    name: "Shama N A",
-    text: "I accidentally entered but now it's my forever spot! Staff are friendly, skilled, and made me feel very comfortable.",
-    staff: "Team",
-    rating: 4.6
+    name: 'Shama N A',
+    text: 'I walked in by accident and now it’s my forever spot. Staff are friendly, skilled and made me feel very comfortable.',
   },
 ];
 
-// --- Components ---
+// --- Small pieces ---
 
-const Logo = ({ className = "", inverted = false }: { className?: string; inverted?: boolean }) => {
-  return (
-    <div className={`flex items-center gap-3 ${className}`}>
-      <img 
-        src={logoOfficial} 
-        alt="ABCD Beauty Clinic" 
-        className={`h-12 md:h-16 w-auto object-contain transition-all duration-300 ${inverted ? 'brightness-0 invert' : ''}`}
-      />
-      <span className={`font-bold text-xl tracking-tight hidden sm:block ${inverted ? 'text-white' : 'text-purple-ink'}`}>
-        ABCD Beauty Clinic
-      </span>
-    </div>
-  );
-};
+type RevealProps = { children: ReactNode; delay?: number; className?: string; key?: string };
+const Reveal = ({ children, delay = 0, className = '' }: RevealProps) => (
+  <motion.div
+    initial={{ opacity: 0, y: 24 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true, margin: '-80px' }}
+    transition={{ duration: 0.8, delay, ease: [0.22, 1, 0.36, 1] }}
+    className={className}
+  >
+    {children}
+  </motion.div>
+);
+
+const WhatsAppIcon = ({ size = 20 }: { size?: number }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="currentColor" aria-hidden="true">
+    <path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.25-.46-2.39-1.47-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.6.13-.14.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.06 2.88 1.21 3.08c.15.2 2.1 3.2 5.08 4.48.71.31 1.26.49 1.69.63.71.22 1.36.19 1.87.12.57-.09 1.75-.72 2-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35zM12.04 21.5h-.01a9.4 9.4 0 0 1-4.8-1.32l-.34-.2-3.57.94.95-3.48-.22-.36a9.4 9.4 0 0 1-1.44-5.02c0-5.2 4.23-9.43 9.44-9.43 2.52 0 4.89.98 6.67 2.77a9.37 9.37 0 0 1 2.76 6.67c0 5.2-4.23 9.43-9.44 9.43zm8.03-17.46A11.27 11.27 0 0 0 12.04.72C5.79.72.7 5.8.7 12.06c0 2 .52 3.95 1.52 5.67L.6 23.6l6.01-1.58a11.3 11.3 0 0 0 5.42 1.38h.01c6.25 0 11.34-5.09 11.34-11.34 0-3.03-1.18-5.88-3.32-8.02z" />
+  </svg>
+);
+
+const Stars = () => (
+  <div className="flex gap-0.5 text-brass" aria-label="5 stars">
+    {Array.from({ length: 5 }).map((_, i) => (
+      <svg key={i} viewBox="0 0 20 20" width="14" height="14" fill="currentColor" aria-hidden="true">
+        <path d="M10 1.5l2.6 5.5 6 .7-4.5 4.1 1.2 6-5.3-3-5.3 3 1.2-6L1.4 7.7l6-.7z" />
+      </svg>
+    ))}
+  </div>
+);
+
+// --- Sections ---
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'py-2 apple-glass shadow-sm' : 'py-4 bg-transparent'}`}>
-      <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-        <Logo inverted={!scrolled} />
-        
-          <div className="hidden md:flex items-center gap-10">
-          {NAVIGATION.map((item) => (
-            <a 
-              key={item.name} 
-              href={item.href} 
-              className={`text-sm font-medium transition-colors relative group ${scrolled ? 'text-purple-deep hover:text-lavender-600' : 'text-white/80 hover:text-white'}`}
-            >
-              {item.name}
-              <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-lavender-500 transition-all group-hover:w-full ${!scrolled && 'bg-white'}`} />
-            </a>
-          ))}
-          <div className="flex items-center gap-3">
-            <a 
-              href="tel:+916238570877" 
-              className={`hidden lg:flex w-10 h-10 rounded-full items-center justify-center border transition-all ${scrolled ? 'border-purple-deep/10 text-purple-deep hover:bg-purple-deep hover:text-white' : 'border-white/20 text-white hover:bg-white hover:text-purple-deep'}`}
-            >
-              <Phone size={18} />
-            </a>
-            <a 
-              href="#booking" 
-              className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all hover:-translate-y-0.5 ${scrolled ? 'bg-purple-deep text-white hover:bg-lavender-600' : 'bg-white text-purple-deep hover:bg-lavender-50'}`}
-            >
-              Book Now
-            </a>
-          </div>
-        </div>
+  useEffect(() => {
+    document.body.style.overflow = open ? 'hidden' : '';
+  }, [open]);
 
-        <div className="md:hidden flex items-center gap-4">
-          <a 
-            href="tel:+916238570877" 
-            className={`w-10 h-10 rounded-full flex items-center justify-center ${scrolled ? 'bg-purple-deep text-white shadow-lg' : 'bg-white text-purple-deep'}`}
-          >
-            <Phone size={18} />
-          </a>
-          <button 
-            className={scrolled ? 'text-purple-deep' : 'text-white'}
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <X /> : (
-              <div className="space-y-1.5 flex flex-col items-end">
-                <div className={`w-6 h-0.5 ${scrolled ? 'bg-purple-deep' : 'bg-white'}`}></div>
-                <div className={`w-4 h-0.5 ${scrolled ? 'bg-purple-deep' : 'bg-white'}`}></div>
-              </div>
-            )}
-          </button>
+  return (
+    <>
+    <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${scrolled ? 'bg-ivory/90 backdrop-blur-md border-b border-line' : 'bg-transparent'}`}>
+      <div className={`hidden md:block overflow-hidden transition-all duration-500 ${scrolled ? 'max-h-0' : 'max-h-10'}`}>
+        <div className="max-w-7xl mx-auto px-6 lg:px-10 py-2.5 flex justify-between text-[11px] tracking-[0.18em] uppercase text-muted">
+          <span>Kanhangad · Cherkala — Open all days</span>
+          <a href={PHONE_TEL} className="hover:text-plum transition-colors">Call {PHONE_DISPLAY}</a>
         </div>
       </div>
+      <nav className="max-w-7xl mx-auto px-6 lg:px-10 h-[72px] flex items-center justify-between">
+        <a href="#top" aria-label="ABCD Beauty Clinic home" className="shrink-0">
+          <img src="/images/logo-mark.png" alt="ABCD Beauty Clinic" className="h-9 md:h-10 w-auto" />
+        </a>
 
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div 
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="absolute top-full left-0 right-0 bg-white shadow-2xl overflow-hidden md:hidden"
+        <div className="hidden lg:flex items-center gap-10">
+          {NAVIGATION.map((item) => (
+            <a key={item.name} href={item.href} className="text-[13px] font-medium text-plum/75 hover:text-plum transition-colors">
+              {item.name}
+            </a>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <a href="#booking" className="hidden sm:inline-flex btn-primary !py-3 !px-6">Book a visit</a>
+          <button
+            className="lg:hidden w-11 h-11 flex items-center justify-center text-plum"
+            onClick={() => setOpen(true)}
+            aria-label="Open menu"
           >
-            <div className="p-8 flex flex-col gap-6">
-              {NAVIGATION.map((item) => (
-                <a 
-                  key={item.name} 
-                  href={item.href} 
-                  className="text-2xl font-bold text-purple-deep"
-                  onClick={() => setMobileMenuOpen(false)}
+            <Menu size={22} />
+          </button>
+        </div>
+      </nav>
+    </header>
+
+      {/* Outside <header>: its backdrop-blur would trap a fixed overlay inside the header box */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[95] bg-plum text-ivory flex flex-col lg:hidden"
+          >
+            <div className="h-[72px] px-6 flex items-center justify-between">
+              <img src="/images/logo-white.png" alt="ABCD Beauty Clinic" className="h-9 w-auto" />
+              <button onClick={() => setOpen(false)} className="w-11 h-11 flex items-center justify-center" aria-label="Close menu">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="flex-1 px-6 pt-10 flex flex-col gap-2">
+              {NAVIGATION.map((item, i) => (
+                <motion.a
+                  key={item.name}
+                  href={item.href}
+                  onClick={() => setOpen(false)}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05 * i }}
+                  className="font-serif text-5xl py-2 border-b border-ivory/10"
                 >
                   {item.name}
-                </a>
+                </motion.a>
               ))}
-              <a 
-                href="#booking" 
-                className="mt-4 bg-purple-deep text-white text-center py-4 rounded-2xl font-bold"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Book Now
-              </a>
+            </div>
+            <div className="p-6 grid grid-cols-2 gap-3">
+              <a href={PHONE_TEL} className="border border-ivory/25 py-4 text-center text-sm font-semibold">Call</a>
+              <a href="#booking" onClick={() => setOpen(false)} className="bg-lilac text-plum py-4 text-center text-sm font-semibold">Book a visit</a>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </nav>
+    </>
   );
 };
 
-const Hero = () => {
-  return (
-    <section className="relative min-h-[85vh] flex items-center pt-28 pb-16 overflow-hidden bg-purple-ink">
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-ink via-purple-darker to-lavender-900/20" />
-        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-lavender-500/20 blur-[150px] rounded-full" />
-        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-purple-600/10 blur-[120px] rounded-full" />
-      </div>
-
-      <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
-        <motion.div
+const Hero = () => (
+  <section id="top" className="relative pt-32 md:pt-44 pb-20 md:pb-28 overflow-hidden">
+    <div className="max-w-7xl mx-auto px-6 lg:px-10 grid lg:grid-cols-12 gap-14 lg:gap-10 items-center">
+      <div className="lg:col-span-6">
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }} className="eyebrow mb-8">
+          Unisex beauty clinic · Since 2018
+        </motion.p>
+        <motion.h1
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1 }}
+          transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+          className="font-serif text-[3.4rem] leading-[0.95] sm:text-7xl lg:text-[6.2rem] tracking-[-0.01em] text-plum"
         >
-          <h1 className="text-5xl md:text-7xl font-bold text-white leading-[1.05] tracking-tight mb-6">
-            Experience Beauty, <br />
-            Backed by <span className="italic font-serif text-lavender-300">Expertise</span>
-          </h1>
-          <p className="text-xl text-lavender-100/60 max-w-lg mb-10 leading-relaxed font-light">
-            Founded in 2018, <span className="text-white font-semibold">ABCD Beauty Clinic</span> was built on one principle — <span className="text-lavender-300 italic font-medium">exceptional customer care</span>. <span className="text-lavender-300 font-medium">Trusted by 5,000+ clients</span>, we now bring our signature experience to Kanhangad, introducing advanced clinic-style beauty services inspired by Korean aesthetics.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <a href="#booking" className="bg-lavender-500 text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-lavender-600 transition-all hover:shadow-[0_0_30px_rgba(128,69,245,0.4)] flex justify-center items-center gap-3">
-              Book Now
-            </a>
-            <a href="#services" className="px-8 py-4 rounded-full font-bold text-lg border border-white/10 text-white bg-white/5 hover:bg-white/10 transition-all text-center">
-              Our Services
-            </a>
-          </div>
-
-          <div className="mt-20 flex items-center gap-12">
-            <div>
-              <div className="text-4xl font-bold text-white tracking-tight">4.6<span className="text-lavender-300 text-2xl">★</span></div>
-              <p className="text-xs text-lavender-400 uppercase tracking-widest mt-2 font-medium">Google Rating</p>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-white tracking-tight">172+</div>
-              <p className="text-xs text-lavender-400 uppercase tracking-widest mt-2 font-medium">Verified Reviews</p>
-            </div>
-          </div>
-        </motion.div>
-
+          Beauty, backed <br className="hidden sm:block" />
+          by <em className="text-lilac-deep">expertise.</em>
+        </motion.h1>
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, delay: 0.15 }}
+          className="mt-8 max-w-md text-[17px] leading-relaxed text-muted"
+        >
+          Hair, skin and clinic-style treatments inspired by Korean aesthetics — delivered with the
+          care that has made us a forever salon for over 5,000 clients in Kanhangad and Cherkala.
+        </motion.p>
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1.2, delay: 0.3 }}
-          className="relative hidden lg:block"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, delay: 0.25 }}
+          className="mt-10 flex flex-col sm:flex-row gap-3"
         >
-          <div className="relative z-10 p-4 bg-white/5 border border-white/10 rounded-[40px] backdrop-blur-3xl overflow-hidden shadow-2xl">
-             <div className="grid grid-cols-2 gap-4 mb-4">
-                <img src={hero1} className="rounded-3xl h-48 w-full object-cover" alt="Service" />
-                <img src={hero2} className="rounded-3xl h-48 w-full object-cover" alt="Service" />
-             </div>
-             <img src={hero3} className="rounded-3xl h-64 w-full object-cover" alt="Salon" />
-          </div>
-          <div className="absolute -top-10 -right-10 w-24 h-24 bg-lavender-500 rounded-full blur-3xl opacity-50" />
-          <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-600 rounded-full blur-3xl opacity-30" />
+          <a href="#booking" className="btn-primary">
+            Book a visit <ArrowRight size={16} />
+          </a>
+          <a href="#services" className="btn-ghost">View services & prices</a>
         </motion.div>
-      </div>
-    </section>
-  );
-};
 
-const About = () => {
-  return (
-    <section id="about" className="py-32 bg-white">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="grid md:grid-cols-2 gap-20 items-center">
-          <div className="relative">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="rounded-[40px] overflow-hidden shadow-2xl z-20 relative"
-            >
-              <img src="https://images.unsplash.com/photo-1560750588-73207b1ef5b8?w=800&q=80" alt="Salon interior" className="w-full h-full object-cover" />
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.3 }}
-              className="absolute -bottom-10 -right-10 w-2/3 aspect-video rounded-3xl overflow-hidden border-8 border-white shadow-2xl"
-            >
-              <img src="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80" alt="Specialist" className="w-full h-full object-cover" />
-            </motion.div>
-          </div>
-
-          <div className="space-y-8">
-            <div className="inline-block h-px w-12 bg-lavender-500 align-middle mr-4" />
-            <span className="text-xs font-bold uppercase tracking-[0.3em] text-lavender-600">Our Story</span>
-            <h2 className="text-5xl font-bold tracking-tight text-purple-deep leading-tight">
-              Where <span className="italic text-lavender-600">Beauty</span> <br />Meets Expertise
-            </h2>
-            <div className="space-y-6 text-lg text-gray-500 font-light leading-relaxed">
-              <p>
-                ABCD Beauty Clinic is Kanhangad's most trusted unisex salon — delivering premium hair, skin, and beauty services in a spotlessly clean and welcoming space.
-              </p>
-              <p>
-                From everyday cuts to complete bridal packages, we treat every client like family. That is why so many call us their forever salon.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-};
-
-const ServicesSection = () => {
-  const [selectedService, setSelectedService] = useState<typeof SERVICES[0] | null>(null);
-
-  return (
-    <section id="services" className="py-24 bg-mist">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="text-center mb-16">
-          <span className="text-xs font-bold uppercase tracking-[0.3em] text-lavender-600 mb-4 block">What We Offer</span>
-          <h2 className="text-4xl font-bold tracking-tight text-purple-deep mb-6">Our Services</h2>
-          <div className="w-24 h-1 bg-gradient-to-r from-transparent via-lavender-500 to-transparent mx-auto" />
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {SERVICES.map((service, idx) => (
-            <motion.div
-              key={service.id}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: idx * 0.1 }}
-              className="group bg-white rounded-[32px] p-8 hover:shadow-2xl transition-all duration-500 border border-lavender-100 flex flex-col items-start cursor-pointer h-full"
-              onClick={() => setSelectedService(service)}
-            >
-              <div className="mb-8 w-16 h-16 rounded-2xl bg-lavender-50 flex items-center justify-center text-lavender-600 group-hover:bg-lavender-600 group-hover:text-white transition-all duration-300">
-                <service.icon size={30} />
-              </div>
-              <h3 className="text-xl font-bold text-purple-deep mb-4">{service.title}</h3>
-              <p className="text-sm text-text-muted leading-relaxed mb-6 flex-grow">
-                {service.description}
-              </p>
-              <div className="text-xs font-bold text-lavender-500 uppercase tracking-widest mt-auto group-hover:text-purple-deep transition-colors">
-                Starting from <span className="text-lg ml-1">{service.price}</span>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
-      <AnimatePresence>
-        {selectedService && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSelectedService(null)}
-              className="absolute inset-0 bg-purple-ink/80 backdrop-blur-md"
-            />
-            <motion.div 
-              layoutId={selectedService.id}
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-2xl bg-purple-ink rounded-[40px] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col border border-white/10"
-            >
-              <button 
-                onClick={() => setSelectedService(null)}
-                className="absolute top-6 right-6 z-20 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors backdrop-blur-md"
-              >
-                <X size={24} />
-              </button>
-              <div className="overflow-y-auto flex-grow custom-scrollbar overscroll-contain">
-                <div className="p-10 relative">
-                  <div className="inline-block p-4 rounded-3xl bg-white/10 text-lavender-300 shadow-sm mb-6">
-                    <selectedService.icon size={32} />
-                  </div>
-                  <h3 className="text-4xl font-bold text-white mb-2">{selectedService.title}</h3>
-                  <div className="text-xl font-bold text-lavender-400 mb-8">Service Menu</div>
-                  
-                  <div className="space-y-10 mb-12">
-                    {selectedService.subcategories?.map((cat) => (
-                      <div key={cat.name}>
-                        <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-white/40 mb-4">{cat.name}</h4>
-                        <div className="space-y-3">
-                          {cat.items.map((item) => (
-                            <div key={item.name} className="flex justify-between items-center py-3 border-b border-white/5">
-                              <span className="text-white/90 font-medium">{item.name}</span>
-                              <span className="text-lavender-300 font-bold">{item.price}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="flex gap-4 sticky bottom-0 pt-6 bg-purple-ink/90 backdrop-blur-md pb-4">
-                    <a href="#booking" onClick={() => setSelectedService(null)} className="flex-1 bg-lavender-500 text-white text-center py-5 rounded-3xl font-bold text-lg hover:bg-lavender-600 transition-colors">
-                      Book Treatment
-                    </a>
-                    <a href={`https://wa.me/916238570877?text=I am interested in ${selectedService.title}`} target="_blank" className="bg-[#22C55E] text-white px-8 py-5 rounded-3xl font-bold flex items-center justify-center hover:bg-green-600 transition-colors" title="Chat on WhatsApp">
-                      <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.539 2.016 2.041-.536c1.01.623 1.956.955 3.251.956 3.181 0 5.767-2.587 5.768-5.766 0-3.18-2.587-5.767-5.772-5.767zm3.377 8.272c-.14.393-.812.756-1.12.784-.285.026-.642.152-1.812-.332-1.498-.619-2.459-2.15-2.534-2.25-.075-.1-.611-.812-.611-1.55 0-.737.387-1.1.527-1.253.14-.153.307-.19.41-.19.102 0 .204.001.292.006.091.004.215-.035.337.257.123.292.42 1.022.457 1.096.037.074.062.161.012.261-.05.1-.075.161-.149.25-.1.124-.2.224-.287.323-.087.1-.177.211-.077.383.1.171.442.73.948 1.18.653.58 1.203.76 1.374.846.171.086.271.071.371-.044.1-.114.426-.496.539-.666.113-.17.227-.142.383-.085s.988.468 1.158.553c.17.085.284.128.326.202.04.072.04.42-.1.813z"/></svg>
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </section>
-  );
-};
-
-const TestimonialsMarquee = () => {
-  return (
-    <section id="testimonials" className="py-24 overflow-hidden bg-white">
-      <div className="max-w-7xl mx-auto px-6 mb-16 text-center">
-        <span className="text-xs font-bold uppercase tracking-[0.3em] text-lavender-600 mb-4 block">Client Stories</span>
-        <h2 className="text-4xl font-bold tracking-tight text-purple-deep mb-4">What Our Clients Say</h2>
-        <p className="text-gray-400 text-lg font-light italic">Rated 4.6/5 by 172+ clients in Kanhangad.</p>
-      </div>
-
-      <div className="relative flex overflow-x-hidden group">
-        <motion.div 
-          animate={{ x: ["0%", "-50%"] }}
-          transition={{ 
-            duration: 40, 
-            repeat: Infinity, 
-            ease: "linear" 
-          }}
-          className="flex whitespace-nowrap py-10"
+        <motion.dl
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1, delay: 0.45 }}
+          className="mt-14 grid grid-cols-3 max-w-md border-t border-line pt-6"
         >
-          {[...TESTIMONIALS, ...TESTIMONIALS].map((t, idx) => (
-            <div 
-              key={idx}
-              className="inline-block w-[450px] mx-4 bg-mist rounded-[32px] p-10 border border-lavender-100 shadow-sm transition-all whitespace-normal group-hover:pause"
-            >
-              <div className="flex justify-between items-start mb-6">
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex gap-0.5 text-yellow-400">
-                    <Star size={16} fill="currentColor" />
-                    <Star size={16} fill="currentColor" />
-                    <Star size={16} fill="currentColor" />
-                    <Star size={16} fill="currentColor" />
-                    <Star size={16} fill={idx % 2 === 0 ? "currentColor" : "none"} />
-                  </div>
-                  <span className="text-[10px] font-bold text-lavender-400 uppercase tracking-[0.2em]">{t.rating} / 5.0 Rating</span>
-                </div>
-                <div className="text-4xl font-serif text-lavender-200 leading-none">“</div>
-              </div>
-              <p className="text-text-muted text-lg leading-relaxed italic mb-8">
-                "{t.text}"
-              </p>
-              <div className="flex items-center gap-4 pt-6 border-t border-lavender-100">
-                <div className="w-12 h-12 rounded-full bg-lavender-200 flex items-center justify-center text-purple-deep font-bold">
-                  {t.name[0]}
-                </div>
-                <div>
-                  <p className="font-bold text-purple-deep">{t.name}</p>
-                </div>
-              </div>
+          {[
+            ['4.6', 'Google rating'],
+            ['172+', 'Reviews'],
+            ['5,000+', 'Clients'],
+          ].map(([v, l]) => (
+            <div key={l}>
+              <dt className="font-serif text-4xl text-plum">{v}</dt>
+              <dd className="mt-1 text-[11px] uppercase tracking-[0.18em] text-muted">{l}</dd>
             </div>
           ))}
-        </motion.div>
+        </motion.dl>
       </div>
-    </section>
+
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1.2, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        className="lg:col-span-6 relative"
+      >
+        <div className="relative ml-auto w-[82%] sm:w-[70%] lg:w-[78%]">
+          <div className="arch aspect-[3/4] bg-paper">
+            <img src={IMG.studio} alt="Ladies’ styling studio at ABCD Beauty Clinic" className="w-full h-full object-cover object-[35%_50%]" />
+          </div>
+          <div className="absolute -left-[28%] bottom-10 w-[52%] aspect-square overflow-hidden border-[6px] border-ivory shadow-[0_30px_60px_-30px_rgba(42,27,51,0.45)]">
+            <img src={IMG.suiteSm} alt="Treatment suite" className="w-full h-full object-cover" />
+          </div>
+          <div className="absolute -right-3 top-10 hidden sm:flex flex-col items-center justify-center w-28 h-28 rounded-full bg-lilac text-plum text-center">
+            <span className="font-serif text-3xl leading-none">2</span>
+            <span className="text-[10px] uppercase tracking-[0.16em] mt-1 leading-tight">clinics in<br />Kasaragod</span>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  </section>
+);
+
+const Ticker = () => {
+  const words = ['Hair', 'Skin', 'Clinical care', 'Bridal', 'Grooming', 'Nails', 'Korean aesthetics', 'Kids'];
+  const row = [...words, ...words];
+  return (
+    <div className="border-y border-line bg-paper py-5 overflow-hidden" aria-hidden="true">
+      <div className="flex w-max animate-marquee">
+        {[...row, ...row].map((w, i) => (
+          <span key={i} className="font-serif italic text-2xl md:text-3xl text-plum/80 px-8 flex items-center gap-16 whitespace-nowrap">
+            {w} <span className="text-lilac text-base not-italic">✦</span>
+          </span>
+        ))}
+      </div>
+    </div>
   );
 };
 
-const FindUs = () => {
-  return (
-    <section id="findus" className="py-28 relative bg-purple-ink text-white overflow-hidden">
-      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-purple-darker to-purple-ink" />
-      
-      <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
-        <div>
-          <span className="text-xs font-bold uppercase tracking-[0.3em] text-lavender-400 mb-6 block">Visit Us</span>
-          <h2 className="text-5xl font-bold mb-10 tracking-tight">
-            Come Visit <span className="italic text-lavender-400">ABCD</span>
+const About = () => (
+  <section id="about" className="py-24 md:py-36">
+    <div className="max-w-7xl mx-auto px-6 lg:px-10 grid lg:grid-cols-12 gap-14 lg:gap-20 items-center">
+      <Reveal className="lg:col-span-5 order-2 lg:order-1">
+        <div className="aspect-[4/5] overflow-hidden bg-paper">
+          <img src={IMG.reception} alt="Reception and kids’ corner at ABCD Beauty Clinic" loading="lazy" className="w-full h-full object-cover object-[60%_50%]" />
+        </div>
+        <p className="mt-4 text-xs text-muted tracking-wide">Reception & kids’ corner, Kanhangad</p>
+      </Reveal>
+
+      <div className="lg:col-span-7 order-1 lg:order-2">
+        <Reveal>
+          <p className="eyebrow mb-6">Our story</p>
+          <h2 className="font-serif text-5xl md:text-6xl leading-[1.02] text-plum">
+            Where expertise <em className="text-lilac-deep">meets warmth.</em>
           </h2>
-          
-          <div className="space-y-10">
-            <div className="flex gap-6 items-start">
-              <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                <MapPin className="text-lavender-400" size={28} />
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-white/40 font-bold mb-2">Our Locations</p>
-                <div className="space-y-4">
-                  <div>
-                    <span className="text-xs text-lavender-400 font-bold uppercase tracking-widest block mb-1">Kanhangad</span>
-                    <p className="text-lg font-light leading-relaxed">
-                      Near 100HP Car Dealers, Madiyan, Manikoth,<br /> Kanhangad, Kerala — 671316
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-lavender-400 font-bold uppercase tracking-widest block mb-1">Cherkala</span>
-                    <p className="text-lg font-light leading-relaxed">
-                      Cherkala Town, Kasaragod, Kerala
-                    </p>
-                  </div>
-                </div>
+        </Reveal>
+        <Reveal delay={0.1}>
+          <div className="mt-8 grid md:grid-cols-2 gap-6 text-[16px] leading-relaxed text-muted">
+            <p>
+              ABCD Beauty Clinic was founded in 2018 on one principle — exceptional customer care.
+              From everyday cuts to complete bridal packages, we treat every client like family.
+            </p>
+            <p>
+              Today our Kanhangad clinic brings advanced, clinic-style beauty services inspired by
+              Korean aesthetics, alongside our branch in Cherkala.
+            </p>
+          </div>
+        </Reveal>
+        <div className="mt-14 grid sm:grid-cols-3 border-t border-line">
+          {[
+            ['01', 'Hygiene', 'Spotless stations and single-use tools, every visit.'],
+            ['02', 'Precision', 'Trained specialists for hair, skin and clinical care.'],
+            ['03', 'Hospitality', 'Unhurried, friendly service — for her, him and kids.'],
+          ].map(([n, t, d], i) => (
+            <Reveal key={n} delay={0.1 * i} className={`pt-6 pb-2 sm:pr-6 ${i > 0 ? 'sm:pl-6 sm:border-l border-line' : ''}`}>
+              <span className="text-xs text-lilac-deep font-semibold tracking-widest">{n}</span>
+              <h3 className="font-serif text-2xl mt-2 text-plum">{t}</h3>
+              <p className="text-sm text-muted mt-2 leading-relaxed">{d}</p>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </div>
+  </section>
+);
+
+const ServiceDrawer = ({ service, onClose }: { service: ServiceCategory | null; onClose: () => void }) => {
+  useEffect(() => {
+    if (!service) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [service, onClose]);
+
+  return (
+    <AnimatePresence>
+      {service && (
+        <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-label={`${service.title} menu`}>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-plum/50 backdrop-blur-[2px]"
+          />
+          <motion.aside
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'tween', duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute right-0 top-0 h-full w-full max-w-xl bg-ivory flex flex-col"
+          >
+            <div className="relative h-56 shrink-0 overflow-hidden">
+              <img src={service.image} alt="" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-plum/70 to-transparent" />
+              <button
+                onClick={onClose}
+                className="absolute top-5 right-5 w-11 h-11 bg-ivory text-plum flex items-center justify-center"
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+              <div className="absolute bottom-5 left-8 text-ivory">
+                <p className="text-[11px] uppercase tracking-[0.25em] opacity-80">{service.audience === 'her' ? 'For her' : 'For him'}</p>
+                <h3 className="font-serif text-4xl mt-1">{service.title}</h3>
               </div>
             </div>
 
-            <div className="flex gap-6 items-start">
-              <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                <Phone className="text-lavender-400" size={28} />
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-white/40 font-bold mb-2">Get in touch</p>
-                <div className="space-y-4">
-                  <div>
-                    <span className="text-xs text-white/40 uppercase tracking-widest block mb-1">Call Us</span>
-                    <a href="tel:+916238570877" className="text-2xl font-bold hover:text-lavender-400 transition-colors">062385 70877</a>
-                  </div>
-                  <div>
-                    <span className="text-xs text-white/40 uppercase tracking-widest block mb-1">WhatsApp</span>
-                    <a href="https://wa.me/916238570877" target="_blank" rel="noopener noreferrer" className="text-2xl font-bold text-[#25D366] hover:text-green-400 transition-colors">062385 70877</a>
-                  </div>
+            <div className="flex-1 overflow-y-auto overscroll-contain px-8 py-8 space-y-10">
+              {service.groups.map((g) => (
+                <div key={g.name}>
+                  <h4 className="eyebrow mb-3">{g.name}</h4>
+                  <ul>
+                    {g.items.map((it) => (
+                      <li key={it.name} className="flex items-baseline gap-3 py-3 border-b border-line">
+                        <span className="text-[15px] text-plum">{it.name}</span>
+                        <span className="flex-1 border-b border-dotted border-plum/20 translate-y-[-4px]" />
+                        <span className="text-[15px] font-semibold text-plum whitespace-nowrap">{it.price}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
+              ))}
+              <p className="text-xs text-muted">Prices are indicative and may vary with hair length and consultation.</p>
             </div>
 
-            <div className="flex gap-6 items-start">
-              <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                <Clock className="text-lavender-400" size={28} />
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-white/40 font-bold mb-4">Open Hours</p>
-                <div className="grid grid-cols-2 gap-8">
-                  <div>
-                    <span className="text-[10px] text-white/40 tracking-[0.2em] uppercase font-bold block mb-2">Ladies</span>
-                    <p className="text-xl font-light">10:00 AM – 10:00 PM</p>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-white/40 tracking-[0.2em] uppercase font-bold block mb-2">Gents</span>
-                    <p className="text-xl font-light">10:00 AM – 12:00 AM</p>
-                  </div>
-                </div>
-                <div className="mt-4 flex flex-col gap-2">
-                  <p className="text-lavender-400 font-bold text-sm tracking-widest uppercase">Open All Days</p>
-                  <div className="flex items-center gap-2 text-white/60 bg-white/5 py-3 px-5 rounded-2xl border border-white/10 mt-2">
-                    <span className="text-xl">🕒</span>
-                    <p className="text-xs font-medium italic">
-                      <span className="text-lavender-400 font-bold not-italic">24-Hour Service Available</span><br />
-                      (Only for pre-booked appointments)
-                    </p>
-                  </div>
-                </div>
-              </div>
+            <div className="shrink-0 p-6 border-t border-line grid grid-cols-[1fr_auto] gap-3 bg-ivory">
+              <a href="#booking" onClick={onClose} className="btn-primary">
+                Book this treatment <ArrowRight size={16} />
+              </a>
+              <a
+                href={`${WHATSAPP}?text=${encodeURIComponent(`Hi ABCD, I'd like to know more about ${service.title}.`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-14 bg-[#25D366] text-white flex items-center justify-center"
+                aria-label="Ask on WhatsApp"
+              >
+                <WhatsAppIcon size={22} />
+              </a>
             </div>
+          </motion.aside>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+const Services = () => {
+  const [audience, setAudience] = useState<'her' | 'him'>('her');
+  const [selected, setSelected] = useState<ServiceCategory | null>(null);
+  const list = SERVICES.filter((s) => s.audience === audience);
+
+  return (
+    <section id="services" className="py-24 md:py-32 bg-paper">
+      <div className="max-w-7xl mx-auto px-6 lg:px-10">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-14">
+          <Reveal>
+            <p className="eyebrow mb-6">Services & prices</p>
+            <h2 className="font-serif text-5xl md:text-6xl leading-[1.02] text-plum max-w-xl">
+              The ABCD <em className="text-lilac-deep">menu.</em>
+            </h2>
+          </Reveal>
+          <div className="inline-flex border border-plum/15 p-1 self-start md:self-auto" role="tablist">
+            {(['her', 'him'] as const).map((a) => (
+              <button
+                key={a}
+                role="tab"
+                aria-selected={audience === a}
+                onClick={() => setAudience(a)}
+                className={`px-7 py-3 text-sm font-semibold tracking-wide transition-colors ${audience === a ? 'bg-plum text-ivory' : 'text-plum/70 hover:text-plum'}`}
+              >
+                For {a}
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className="flex flex-col items-center">
-          <div className="relative mb-12">
-             <motion.div 
-               animate={{ scale: [1, 1.4, 1.8], opacity: [0.4, 0.1, 0] }}
-               transition={{ duration: 2.5, repeat: Infinity, ease: "easeOut" }}
-               className="absolute inset-0 border-2 border-lavender-400 rounded-full"
-             />
-             <motion.div 
-               animate={{ scale: [1, 1.4, 1.8], opacity: [0.4, 0.1, 0] }}
-               transition={{ duration: 2.5, repeat: Infinity, ease: "easeOut", delay: 0.8 }}
-               className="absolute inset-0 border-2 border-lavender-400 rounded-full"
-             />
+        <motion.div key={audience} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-12">
+          {list.map((s, i) => {
+            // A lone card on the last row becomes a wide banner so the grid stays balanced.
+            const wide = i === list.length - 1 && list.length % 3 === 1;
+            return (
+            <button key={s.id} onClick={() => setSelected(s)} className={`group text-left ${wide ? 'lg:col-span-3 lg:grid lg:grid-cols-3 lg:gap-6 lg:items-center' : ''}`}>
+              <div className={`relative aspect-[4/3] overflow-hidden bg-lilac-light ${wide ? 'lg:col-span-2 lg:aspect-[21/9]' : ''}`}>
+                <img
+                  src={s.image}
+                  alt={s.title}
+                  loading="lazy"
+                  className="w-full h-full object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-[1.04]"
+                />
+                <span className="absolute top-4 left-4 bg-ivory/90 text-plum text-[11px] font-semibold tracking-widest px-3 py-1.5">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+              </div>
+              <div>
+              <div className="pt-5 flex items-start justify-between gap-4">
+                <div>
+                  <h3 className={`font-serif text-plum ${wide ? 'text-3xl lg:text-5xl' : 'text-3xl'}`}>{s.title}</h3>
+                  <p className="text-sm text-muted mt-1.5 leading-relaxed">{s.description}</p>
+                </div>
+                <span className="mt-1 shrink-0 w-10 h-10 border border-plum/15 flex items-center justify-center text-plum transition-colors group-hover:bg-plum group-hover:text-ivory">
+                  <ArrowUpRight size={18} />
+                </span>
+              </div>
+              <p className="mt-4 text-[12px] uppercase tracking-[0.18em] text-plum/60">
+                From <span className="text-plum font-semibold">{s.from}</span> · See price list
+              </p>
+              </div>
+            </button>
+            );
+          })}
+        </motion.div>
+      </div>
+      <ServiceDrawer service={selected} onClose={() => setSelected(null)} />
+    </section>
+  );
+};
 
-             {/* Moving Icon */}
-             <motion.div 
-               animate={{ y: [0, -20, 0] }}
-               transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-               className="relative z-10 w-40 h-40 bg-gradient-to-br from-lavender-400 to-lavender-600 rounded-[50px] flex items-center justify-center shadow-[0_0_60px_rgba(157,110,255,0.4)]"
-             >
-                <MapPin size={80} className="text-white drop-shadow-2xl" />
-             </motion.div>
-          </div>
-          
-          <div className="text-center mb-12">
-            <h3 className="text-3xl font-bold mb-3">Finding Your Way</h3>
-            <p className="text-lavender-200/50 font-light italic">In the heart of Manikoth, Kanhangad.</p>
-          </div>
+const Specialists = () => (
+  <section className="py-24 md:py-32 bg-plum text-ivory">
+    <div className="max-w-7xl mx-auto px-6 lg:px-10">
+      <div className="grid lg:grid-cols-12 gap-12">
+        <Reveal className="lg:col-span-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-lilac mb-6">Our people</p>
+          <h2 className="font-serif text-5xl md:text-6xl leading-[1.02]">
+            Specialists, <em className="text-lilac">not generalists.</em>
+          </h2>
+        </Reveal>
+        <div className="lg:col-span-8 grid md:grid-cols-3 gap-px bg-ivory/10">
+          {SPECIALISTS.map((s, i) => (
+            <Reveal key={s.title} delay={0.1 * i} className="bg-plum p-8 md:pt-0 md:first:pl-0">
+              <span className="font-serif text-6xl text-lilac/60">0{i + 1}</span>
+              <h3 className="font-serif text-3xl mt-6">{s.title}</h3>
+              <p className="text-sm text-ivory/60 mt-3 leading-relaxed">{s.description}</p>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </div>
+  </section>
+);
 
-          <motion.a 
-            href="https://www.google.com/maps/search/?api=1&query=ABCD+Beauty+Clinic+Kanhangad+Kerala" 
-            target="_blank"
-            rel="noopener noreferrer"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="flex items-center gap-4 bg-white text-purple-ink px-12 py-5 rounded-full font-bold text-xl hover:shadow-[0_0_40px_rgba(255,255,255,0.4)] transition-all"
-          >
-            Find Us on Maps
-            <ArrowRight size={24} />
-          </motion.a>
+const Clinic = () => {
+  const spaces = [
+    { src: IMG.studio, title: 'Styling studio', note: 'Hair, colour & makeup' },
+    { src: IMG.suite, title: 'Treatment suite', note: 'Facials & clinical care' },
+    { src: IMG.reception, title: 'Kids’ corner', note: 'Reception & kids’ cuts' },
+  ];
+  return (
+    <section id="clinic" className="py-24 md:py-36">
+      <div className="max-w-7xl mx-auto px-6 lg:px-10">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-14">
+          <Reveal>
+            <p className="eyebrow mb-6">Inside ABCD</p>
+            <h2 className="font-serif text-5xl md:text-6xl leading-[1.02] text-plum">
+              A calm space, <em className="text-lilac-deep">made for you.</em>
+            </h2>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <p className="max-w-sm text-muted leading-relaxed">
+              Separate areas for styling, treatments and kids — so every visit feels private, clean and unhurried.
+            </p>
+          </Reveal>
+        </div>
+        <div className="grid md:grid-cols-12 gap-6">
+          {spaces.map((s, i) => (
+            <Reveal key={s.title} delay={0.1 * i} className={i === 0 ? 'md:col-span-7 md:row-span-2' : 'md:col-span-5'}>
+              <figure className="group">
+                <div className={`overflow-hidden bg-paper ${i === 0 ? 'aspect-[4/3] md:aspect-auto md:h-[640px]' : 'aspect-[16/10] md:h-[300px] md:aspect-auto'}`}>
+                  <img src={s.src} alt={s.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-[1.2s] group-hover:scale-[1.03]" />
+                </div>
+                <figcaption className="mt-3 flex justify-between text-sm">
+                  <span className="font-serif text-xl text-plum">{s.title}</span>
+                  <span className="text-muted">{s.note}</span>
+                </figcaption>
+              </figure>
+            </Reveal>
+          ))}
         </div>
       </div>
     </section>
   );
 };
 
-const Footer = ({ onOpenAdmin, onOpenPrivacy, onOpenTerms }: { onOpenAdmin: () => void, onOpenPrivacy: () => void, onOpenTerms: () => void }) => {
+const Reviews = () => (
+  <section id="reviews" className="py-24 md:py-32 bg-paper overflow-hidden">
+    <div className="max-w-7xl mx-auto px-6 lg:px-10">
+      <div className="grid lg:grid-cols-12 gap-12 items-end mb-14">
+        <Reveal className="lg:col-span-7">
+          <p className="eyebrow mb-6">Client stories</p>
+          <h2 className="font-serif text-5xl md:text-6xl leading-[1.02] text-plum">
+            “My <em className="text-lilac-deep">forever salon.</em>”
+          </h2>
+        </Reveal>
+        <Reveal delay={0.1} className="lg:col-span-5 flex items-center gap-6 lg:justify-end">
+          <div className="font-serif text-7xl text-plum leading-none">4.6</div>
+          <div>
+            <Stars />
+            <p className="text-sm text-muted mt-2">from 172+ Google reviews</p>
+          </div>
+        </Reveal>
+      </div>
+    </div>
+    <div className="max-w-7xl mx-auto px-6 lg:px-10 flex justify-end gap-2 mb-6">
+      {[-1, 1].map((dir) => (
+        <button
+          key={dir}
+          onClick={() => document.getElementById('review-track')?.scrollBy({ left: dir * 440, behavior: 'smooth' })}
+          aria-label={dir < 0 ? 'Previous reviews' : 'Next reviews'}
+          className="w-11 h-11 border border-plum/20 text-plum flex items-center justify-center hover:bg-plum hover:text-ivory transition-colors"
+        >
+          <ArrowRight size={18} className={dir < 0 ? 'rotate-180' : ''} />
+        </button>
+      ))}
+    </div>
+    <div
+      id="review-track"
+      className="flex gap-6 overflow-x-auto snap-x snap-mandatory no-scrollbar pb-4"
+      style={{ paddingInline: 'max(1.5rem, calc((100vw - 80rem) / 2 + 2.5rem))', scrollPaddingInline: 'max(1.5rem, calc((100vw - 80rem) / 2 + 2.5rem))' }}
+    >
+      {TESTIMONIALS.map((t) => (
+        <figure key={t.name} className="snap-start shrink-0 w-[85%] sm:w-[420px] bg-ivory border border-line p-8 md:p-10 flex flex-col">
+          <Stars />
+          <blockquote className="mt-6 font-serif text-[1.6rem] leading-snug text-plum flex-1">“{t.text}”</blockquote>
+          <figcaption className="mt-8 pt-5 border-t border-line flex items-center gap-3">
+            <span className="w-10 h-10 rounded-full bg-lilac-light text-plum flex items-center justify-center font-semibold text-sm">{t.name[0]}</span>
+            <span>
+              <span className="block text-sm font-semibold text-plum">{t.name}</span>
+              <span className="block text-xs text-muted">Google review</span>
+            </span>
+          </figcaption>
+        </figure>
+      ))}
+    </div>
+  </section>
+);
+
+const Booking = () => {
+  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+
+    const appointmentData = {
+      name: formData.get('name'),
+      service: formData.get('service'),
+      phone: formData.get('phone'),
+      status: 'pending',
+      createdAt: serverTimestamp(),
+      userId: auth.currentUser?.uid || 'anonymous',
+    };
+
+    try {
+      await addDoc(collection(db, 'appointments'), appointmentData);
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+      const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+      const message = `🔔 New Booking Alert!\n\nDate: ${dateStr}\nTime: ${timeStr}\n\nName: ${appointmentData.name}\nService: ${appointmentData.service}\nPhone: ${appointmentData.phone}`;
+      window.open(`${WHATSAPP}?text=${encodeURIComponent(message)}`, '_blank');
+      setSubmitted(true);
+    } catch (error) {
+      console.error('Error saving appointment:', error);
+      alert('Something went wrong. Please call us directly.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <section id="booking" className="py-24 md:py-36">
+      <div className="max-w-7xl mx-auto px-6 lg:px-10 grid lg:grid-cols-12 gap-14 lg:gap-20">
+        <Reveal className="lg:col-span-5">
+          <p className="eyebrow mb-6">Appointments</p>
+          <h2 className="font-serif text-5xl md:text-6xl leading-[1.02] text-plum">
+            Book your <em className="text-lilac-deep">visit.</em>
+          </h2>
+          <p className="mt-6 text-muted leading-relaxed max-w-sm">
+            Send a request and we’ll confirm your slot on WhatsApp, usually within the hour.
+          </p>
+          <div className="mt-10 space-y-4">
+            <a href={PHONE_TEL} className="flex items-center justify-between py-4 border-b border-line group">
+              <span className="flex items-center gap-4 text-plum"><Phone size={18} className="text-lilac-deep" /> {PHONE_DISPLAY}</span>
+              <span className="text-xs uppercase tracking-[0.18em] text-muted group-hover:text-plum">Call</span>
+            </a>
+            <a href={WHATSAPP} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between py-4 border-b border-line group">
+              <span className="flex items-center gap-4 text-plum"><span className="text-[#25D366]"><WhatsAppIcon size={18} /></span> WhatsApp us</span>
+              <span className="text-xs uppercase tracking-[0.18em] text-muted group-hover:text-plum">Chat</span>
+            </a>
+          </div>
+          <p className="mt-8 text-sm text-muted">
+            <span className="text-plum font-semibold">24-hour service</span> available for pre-booked appointments.
+          </p>
+        </Reveal>
+
+        <Reveal delay={0.1} className="lg:col-span-7">
+          <div className="bg-paper p-8 md:p-14">
+            {submitted ? (
+              <div className="text-center py-12">
+                <CheckCircle2 size={44} className="mx-auto text-lilac-deep" />
+                <h3 className="font-serif text-4xl text-plum mt-6">Request sent.</h3>
+                <p className="text-muted mt-3">Thank you — we’ll contact you shortly to confirm.</p>
+                <button onClick={() => setSubmitted(false)} className="mt-8 text-sm font-semibold text-lilac-deep underline underline-offset-4">
+                  Book another
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-9">
+                <div className="grid md:grid-cols-2 gap-9">
+                  <label className="block">
+                    <span className="eyebrow !text-muted">Full name</span>
+                    <input name="name" required type="text" autoComplete="name" placeholder="Your name" className="field mt-2" />
+                  </label>
+                  <label className="block">
+                    <span className="eyebrow !text-muted">Phone</span>
+                    <input name="phone" required type="tel" autoComplete="tel" placeholder="+91" className="field mt-2" />
+                  </label>
+                </div>
+                <label className="block">
+                  <span className="eyebrow !text-muted">Service</span>
+                  <select name="service" required defaultValue="" className="field mt-2 appearance-none cursor-pointer">
+                    <option value="" disabled>Choose a service</option>
+                    {SERVICES.map((c) => (
+                      <optgroup key={c.id} label={`${c.title} (${c.audience === 'her' ? 'Ladies' : 'Men'})`}>
+                        {c.groups.flatMap((g) =>
+                          g.items.map((it) => (
+                            <option key={`${c.id}-${g.name}-${it.name}`} value={it.name}>
+                              {it.name}
+                            </option>
+                          )),
+                        )}
+                      </optgroup>
+                    ))}
+                  </select>
+                </label>
+                <button type="submit" disabled={loading} className="btn-primary w-full !py-5 disabled:opacity-50">
+                  {loading ? 'Sending…' : 'Request appointment'} <ArrowRight size={16} />
+                </button>
+                <p className="text-xs text-muted text-center">Opens WhatsApp to send your request to the clinic.</p>
+              </form>
+            )}
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+};
+
+const Visit = () => {
+  const locations = [
+    {
+      name: 'Kanhangad',
+      tag: 'Flagship clinic',
+      address: 'Near 100HP Car Dealers, Madiyan, Manikoth, Kanhangad, Kerala 671316',
+      maps: MAPS_KANHANGAD,
+    },
+    {
+      name: 'Cherkala',
+      tag: 'Branch',
+      address: 'Cherkala Town, Kasaragod, Kerala',
+      maps: MAPS_CHERKALA,
+    },
+  ];
+  return (
+    <section id="visit" className="py-24 md:py-32 bg-paper">
+      <div className="max-w-7xl mx-auto px-6 lg:px-10">
+        <Reveal>
+          <p className="eyebrow mb-6">Visit us</p>
+          <h2 className="font-serif text-5xl md:text-6xl leading-[1.02] text-plum mb-14">
+            Two clinics, <em className="text-lilac-deep">open every day.</em>
+          </h2>
+        </Reveal>
+        <div className="grid lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-7 grid sm:grid-cols-2 gap-6">
+            {locations.map((l, i) => (
+              <Reveal key={l.name} delay={0.1 * i} className="bg-ivory border border-line p-8 flex flex-col">
+                <MapPin size={20} className="text-lilac-deep" />
+                <p className="mt-6 text-[11px] uppercase tracking-[0.2em] text-muted">{l.tag}</p>
+                <h3 className="font-serif text-4xl text-plum mt-1">{l.name}</h3>
+                <p className="mt-4 text-muted leading-relaxed flex-1">{l.address}</p>
+                <a href={l.maps} target="_blank" rel="noopener noreferrer" className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-plum border-b border-plum pb-1 self-start hover:text-lilac-deep hover:border-lilac-deep">
+                  Get directions <ArrowUpRight size={16} />
+                </a>
+              </Reveal>
+            ))}
+          </div>
+          <Reveal delay={0.2} className="lg:col-span-5 bg-plum text-ivory p-8 md:p-10">
+            <p className="text-[11px] uppercase tracking-[0.2em] text-lilac">Opening hours · all days</p>
+            <dl className="mt-8 divide-y divide-ivory/10">
+              <div className="flex justify-between py-4">
+                <dt className="text-ivory/70">Ladies</dt>
+                <dd className="font-serif text-2xl">10 am – 10 pm</dd>
+              </div>
+              <div className="flex justify-between py-4">
+                <dt className="text-ivory/70">Gents</dt>
+                <dd className="font-serif text-2xl">10 am – 12 am</dd>
+              </div>
+            </dl>
+            <p className="mt-6 text-sm text-ivory/60 leading-relaxed">
+              24-hour service is available for pre-booked appointments.
+            </p>
+            <div className="mt-10 grid grid-cols-2 gap-3">
+              <a href={PHONE_TEL} className="border border-ivory/25 py-3.5 text-center text-sm font-semibold hover:bg-ivory hover:text-plum transition-colors">Call</a>
+              <a href={WHATSAPP} target="_blank" rel="noopener noreferrer" className="bg-lilac text-plum py-3.5 text-center text-sm font-semibold hover:bg-ivory transition-colors">WhatsApp</a>
+            </div>
+          </Reveal>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const InstagramBand = () => (
+  <section className="py-20 md:py-24">
+    <div className="max-w-7xl mx-auto px-6 lg:px-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+      <Reveal>
+        <p className="eyebrow mb-4">@abcdbeautyclinic</p>
+        <h2 className="font-serif text-4xl md:text-5xl text-plum">See our latest work on <em className="text-lilac-deep">Instagram.</em></h2>
+      </Reveal>
+      <a href={INSTAGRAM} target="_blank" rel="noopener noreferrer" className="btn-ghost shrink-0">
+        <Instagram size={18} /> Follow us
+      </a>
+    </div>
+  </section>
+);
+
+const Footer = ({ onOpenAdmin, onOpenPrivacy, onOpenTerms }: { onOpenAdmin: () => void; onOpenPrivacy: () => void; onOpenTerms: () => void }) => {
   const [clickCount, setClickCount] = useState(0);
-  
+
+  // Hidden admin entry: click the copyright line 5 times.
   const handleSecretClick = () => {
-    setClickCount(prev => prev + 1);
-    if (clickCount + 1 >= 5) {
+    const next = clickCount + 1;
+    setClickCount(next);
+    if (next >= 5) {
       onOpenAdmin();
       setClickCount(0);
     }
-    // Reset count after 2 seconds of inactivity
     setTimeout(() => setClickCount(0), 3000);
   };
 
   return (
-    <footer className="bg-purple-darker py-16 border-t border-white/5">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="grid md:grid-cols-4 gap-12 mb-16">
-          <div className="col-span-2">
-            <Logo className="mb-10" inverted={true} />
-            <p className="text-white/40 max-w-sm text-lg font-light leading-relaxed italic">
-              Empowering beauty and confidence in Kanhangad & Cherkala since 2018. Visit our unisex clinic for professional transformations.
+    <footer className="bg-[#1E1326] text-ivory pt-20 pb-10">
+      <div className="max-w-7xl mx-auto px-6 lg:px-10">
+        <div className="grid md:grid-cols-12 gap-12 pb-16 border-b border-ivory/10">
+          <div className="md:col-span-5">
+            <img src="/images/logo-white.png" alt="ABCD Beauty Clinic" className="h-11 w-auto opacity-90" />
+            <p className="mt-8 font-serif text-3xl leading-snug text-ivory/90 max-w-sm">
+              Beauty and confidence in Kanhangad & Cherkala, since 2018.
             </p>
-            <div className="flex gap-6 mt-12">
-              <a href="https://www.instagram.com/abcdbeautyclinic?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-lavender-600 transition-all">
-                <Instagram size={24} />
-              </a>
-              <a href="tel:+916238570877" className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-lavender-600 transition-all" title="Call Us">
-                <Phone size={22} />
-              </a>
-              <a href="https://wa.me/916238570877" target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-green-600 transition-all" title="WhatsApp Us">
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.539 2.016 2.041-.536c1.01.623 1.956.955 3.251.956 3.181 0 5.767-2.587 5.768-5.766 0-3.18-2.587-5.767-5.772-5.767zm3.377 8.272c-.14.393-.812.756-1.12.784-.285.026-.642.152-1.812-.332-1.498-.619-2.459-2.15-2.534-2.25-.075-.1-.611-.812-.611-1.55 0-.737.387-1.1.527-1.253.14-.153.307-.19.41-.19.102 0 .204.001.292.006.091.004.215-.035.337.257.123.292.42 1.022.457 1.096.037.074.062.161.012.261-.05.1-.075.161-.149.25-.1.124-.2.224-.287.323-.087.1-.177.211-.077.383.1.171.442.73.948 1.18.653.58 1.203.76 1.374.846.171.086.271.071.371-.044.1-.114.426-.496.539-.666.113-.17.227-.142.383-.085s.988.468 1.158.553c.17.085.284.128.326.202.04.072.04.42-.1.813z"/></svg>
-              </a>
-            </div>
           </div>
-          <div>
-            <h4 className="text-xs uppercase tracking-[0.2em] text-white/50 mb-8 font-bold">Quick Links</h4>
-            <ul className="space-y-4">
-              {['Hair Services', 'Skin Care', 'Clinical', 'Bridal'].map(s => (
-                <li key={s}><a href="#services" className="text-white/30 hover:text-lavender-300 transition-colors font-light">{s}</a></li>
+          <div className="md:col-span-2">
+            <h4 className="text-[11px] uppercase tracking-[0.2em] text-ivory/40 mb-5">Explore</h4>
+            <ul className="space-y-3 text-sm text-ivory/70">
+              {NAVIGATION.map((n) => (
+                <li key={n.name}><a href={n.href} className="hover:text-lilac">{n.name}</a></li>
               ))}
             </ul>
           </div>
-          <div>
-            <h4 className="text-xs uppercase tracking-[0.2em] text-white/50 mb-8 font-bold">Hours (All Days)</h4>
-            <div className="text-white/30 font-light space-y-4">
-              <div>
-                <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold mb-1">Ladies</p>
-                <p>10 AM – 10 PM</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold mb-1">Gents</p>
-                <p>10 AM – 12 AM</p>
-              </div>
-              <p className="text-[10px] text-lavender-500/50 italic leading-tight">
-                24-Hour service available for pre-booked appointments
-              </p>
-            </div>
+          <div className="md:col-span-2">
+            <h4 className="text-[11px] uppercase tracking-[0.2em] text-ivory/40 mb-5">Hours</h4>
+            <p className="text-sm text-ivory/70 leading-relaxed">Ladies 10 am – 10 pm<br />Gents 10 am – 12 am<br />Open all days</p>
           </div>
-          <div>
-            <h4 className="text-xs uppercase tracking-[0.2em] text-white/50 mb-8 font-bold">Locations</h4>
-            <div className="space-y-4">
-              <p className="text-white/30 font-light leading-tight">
-                <span className="text-white/40 font-bold block text-[10px] uppercase mb-1">Kanhangad</span>
-                Madiyan, Manikoth,<br /> Kanhangad, Kerala — 671316
-              </p>
-              <p className="text-white/30 font-light leading-tight">
-                <span className="text-white/40 font-bold block text-[10px] uppercase mb-1">Cherkala</span>
-                Cherkala Town, Kasaragod,<br /> Kerala
-              </p>
+          <div className="md:col-span-3">
+            <h4 className="text-[11px] uppercase tracking-[0.2em] text-ivory/40 mb-5">Contact</h4>
+            <a href={PHONE_TEL} className="block text-sm text-ivory/70 hover:text-lilac">{PHONE_DISPLAY}</a>
+            <div className="flex gap-3 mt-6">
+              <a href={INSTAGRAM} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="w-11 h-11 border border-ivory/15 flex items-center justify-center hover:bg-lilac hover:text-plum hover:border-lilac transition-colors"><Instagram size={18} /></a>
+              <a href={WHATSAPP} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="w-11 h-11 border border-ivory/15 flex items-center justify-center hover:bg-lilac hover:text-plum hover:border-lilac transition-colors"><WhatsAppIcon size={18} /></a>
+              <a href={PHONE_TEL} aria-label="Call" className="w-11 h-11 border border-ivory/15 flex items-center justify-center hover:bg-lilac hover:text-plum hover:border-lilac transition-colors"><Phone size={17} /></a>
             </div>
           </div>
         </div>
-        <div className="pt-12 border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-8">
-          <p 
-            onClick={handleSecretClick}
-            className="text-sm text-white/20 cursor-default select-none"
-          >
-            © 2026 ABCD Beauty Clinic. All Professional Care.
-          </p>
-          <div className="flex gap-10">
-            <button onClick={onOpenPrivacy} className="text-xs uppercase tracking-widest text-white/20 hover:text-white transition-colors">Privacy</button>
-            <button onClick={onOpenTerms} className="text-xs uppercase tracking-widest text-white/20 hover:text-white transition-colors">Terms</button>
+        <div className="pt-8 flex flex-col sm:flex-row justify-between items-center gap-6 text-xs text-ivory/35">
+          <p onClick={handleSecretClick} className="cursor-default select-none">© {new Date().getFullYear()} ABCD Beauty Clinic. All rights reserved.</p>
+          <div className="flex gap-8 uppercase tracking-[0.18em]">
+            <button onClick={onOpenPrivacy} className="hover:text-ivory">Privacy</button>
+            <button onClick={onOpenTerms} className="hover:text-ivory">Terms</button>
           </div>
         </div>
       </div>
@@ -1004,133 +886,27 @@ const Footer = ({ onOpenAdmin, onOpenPrivacy, onOpenTerms }: { onOpenAdmin: () =
   );
 };
 
-const BookingSection = () => {
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
+const WhatsAppFloatingButton = () => (
+  <a
+    href={WHATSAPP}
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="Chat on WhatsApp"
+    className="fixed bottom-6 right-6 z-[90] w-14 h-14 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-[0_12px_30px_-8px_rgba(37,211,102,0.6)] hover:scale-105 transition-transform"
+  >
+    <WhatsAppIcon size={28} />
+  </a>
+);
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    const form = e.target as HTMLFormElement;
-    const formData = new FormData(form);
-    
-    const appointmentData = {
-      name: formData.get('name'),
-      service: formData.get('service'),
-      phone: formData.get('phone'),
-      status: 'pending',
-      createdAt: serverTimestamp(),
-      userId: auth.currentUser?.uid || 'anonymous'
-    };
+// --- Admin (hidden) ---
 
-    try {
-      await addDoc(collection(db, 'appointments'), appointmentData);
-      
-      // Format the WhatsApp message
-      const now = new Date();
-      const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
-      const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-      
-      const message = `🔔 New Booking Alert!\n\nDate: ${dateStr}\nTime: ${timeStr}\n\nName: ${appointmentData.name}\nService: ${appointmentData.service}\nPhone: ${appointmentData.phone}`;
-      const encodedMessage = encodeURIComponent(message);
-      
-      // Open WhatsApp in a new tab
-      window.open(`https://wa.me/916238570877?text=${encodedMessage}`, '_blank');
-
-      setSubmitted(true);
-    } catch (error) {
-      console.error("Error saving appointment:", error);
-      alert("Something went wrong. Please call us directly.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <section id="booking" className="py-32 bg-white">
-      <div className="max-w-4xl mx-auto px-6">
-        <div className="text-center mb-16">
-          <span className="text-xs font-bold uppercase tracking-[0.3em] text-lavender-600 mb-4 block">Appointments</span>
-          <h2 className="text-6xl font-bold tracking-tight text-purple-deep mb-4">Book Your Visit</h2>
-          <p className="text-xl text-gray-400 font-light italic">Confirmation within the hour.</p>
-        </div>
-
-        <div className="bg-mist p-10 md:p-16 rounded-[48px] relative overflow-hidden border border-lavender-100 shadow-xl">
-          {submitted ? (
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="text-center py-10"
-            >
-              <div className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-8">
-                <CheckCircle2 size={48} />
-              </div>
-              <h3 className="text-4xl font-bold text-purple-deep mb-4">Request Sent!</h3>
-              <p className="text-gray-500 mb-10 italic text-lg">Thank you for booking. We will contact you shortly for confirmation.</p>
-              <button 
-                onClick={() => setSubmitted(false)}
-                className="text-sm font-bold text-lavender-600 hover:underline"
-              >
-                Go Back
-              </button>
-            </motion.div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-8">
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="space-y-3">
-                  <label className="text-[10px] uppercase font-bold tracking-[0.2em] text-lavender-400 ml-4">Full Name</label>
-                  <input name="name" required type="text" placeholder="Your Name" className="w-full bg-white border border-lavender-100 rounded-3xl px-8 py-5 focus:outline-none focus:ring-2 focus:ring-lavender-400 transition-all text-purple-deep" />
-                </div>
-                <div className="space-y-3">
-                  <label className="text-[10px] uppercase font-bold tracking-[0.2em] text-lavender-400 ml-4">Service</label>
-                  <select name="service" required className="w-full bg-white border border-lavender-100 rounded-3xl px-8 py-5 focus:outline-none focus:ring-2 focus:ring-lavender-400 transition-all text-purple-deep appearance-none">
-                    <option value="">Select Service</option>
-                    {SERVICES.map(category => (
-                      <optgroup key={category.id} label={category.title}>
-                        {category.subcategories?.map(sub => (
-                          sub.items.map(item => (
-                            <option key={`${category.id}-${item.name}`} value={item.name}>
-                              {item.name}
-                            </option>
-                          ))
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <label className="text-[10px] uppercase font-bold tracking-[0.2em] text-lavender-400 ml-4">Phone Number</label>
-                <input name="phone" required type="tel" placeholder="+91" className="w-full bg-white border border-lavender-100 rounded-3xl px-8 py-5 focus:outline-none focus:ring-2 focus:ring-lavender-400 transition-all text-purple-deep" />
-              </div>
-              <button 
-                type="submit" 
-                disabled={loading}
-                className="w-full bg-purple-deep text-white py-6 rounded-3xl font-bold text-xl hover:bg-lavender-600 hover:shadow-2xl transition-all flex items-center justify-center gap-4 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Processing...' : 'Confirm Appointment'}
-                <ArrowRight size={24} />
-              </button>
-            </form>
-          )}
-        </div>
-      </div>
-    </section>
-  );
-};
-
-const AdminSection = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+const AdminSection = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const [user, setUser] = useState<User | null>(null);
   const [appointments, setAppointments] = useState<any[]>([]);
-  const [authLoading, setAuthLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setAuthLoading(false);
-    });
+    const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
     return () => unsubscribe();
   }, []);
 
@@ -1140,13 +916,14 @@ const AdminSection = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => voi
     if (isAdminUser) {
       setError(null);
       const q = query(collection(db, 'appointments'), orderBy('createdAt', 'desc'));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        setAppointments(docs);
-      }, (err) => {
-        console.error("Firestore error:", err);
-        setError("Permission Denied: You do not have access to view these records.");
-      });
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => setAppointments(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))),
+        (err) => {
+          console.error('Firestore error:', err);
+          setError('Permission Denied: You do not have access to view these records.');
+        },
+      );
       return () => unsubscribe();
     } else if (user) {
       setError(`Access Denied: ${user.email} is not an authorized administrator.`);
@@ -1156,9 +933,9 @@ const AdminSection = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => voi
   const handleLogin = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error("Login failed:", error);
-      setError("Login failed. Please try again.");
+    } catch (e) {
+      console.error('Login failed:', e);
+      setError('Login failed. Please try again.');
     }
   };
 
@@ -1168,358 +945,173 @@ const AdminSection = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => voi
     setError(null);
   };
 
-  const updateStatus = async (id: string, newStatus: string) => {
+  const updateStatus = async (id: string, status: string) => {
     try {
-      await updateDoc(doc(db, 'appointments', id), { status: newStatus });
+      await updateDoc(doc(db, 'appointments', id), { status });
     } catch (e) {
       console.error(e);
     }
   };
 
   const deleteBooking = async (id: string) => {
-    if (confirm("Delete this appointment?")) {
-      await deleteDoc(doc(db, 'appointments', id));
-    }
+    if (confirm('Delete this appointment?')) await deleteDoc(doc(db, 'appointments', id));
   };
 
   if (!isOpen) return null;
 
   return (
-    <AnimatePresence>
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] bg-white overflow-y-auto"
-      >
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="flex justify-between items-start mb-12">
-            <div>
-              <button 
-                onClick={onClose}
-                className="flex items-center gap-2 text-lavender-600 mb-6 font-bold hover:translate-x-[-4px] transition-transform"
-              >
-                <ChevronLeft size={20} />
-                Back to Site
-              </button>
-              <span className="text-xs font-bold uppercase tracking-[0.3em] text-lavender-600 mb-4 block">Dashboard</span>
-              <h2 className="text-4xl font-bold tracking-tight text-purple-deep">Admin Panel</h2>
-            </div>
-            {user ? (
-              <div className="flex items-center gap-4 bg-mist p-3 rounded-2xl border border-lavender-100">
-                <div className="text-right hidden sm:block">
-                  <p className="text-sm font-bold text-purple-deep">{user.displayName}</p>
-                  <p className="text-[10px] text-gray-400">{user.email}</p>
-                </div>
-                <button 
-                  onClick={handleLogout}
-                  className="p-3 bg-white text-red-500 rounded-xl hover:bg-red-50 transition-colors shadow-sm"
-                  title="Logout"
-                >
-                  <LogOut size={20} />
-                </button>
-              </div>
-            ) : (
-              <button 
-                onClick={handleLogin}
-                className="bg-purple-deep text-white px-8 py-3 rounded-full font-bold flex items-center gap-3 hover:bg-lavender-600 transition-all shadow-lg"
-              >
-                <Lock size={18} />
-                Login to Dashboard
-              </button>
-            )}
+    <div className="fixed inset-0 z-[110] bg-ivory overflow-y-auto">
+      <div className="max-w-6xl mx-auto px-6 py-12">
+        <div className="flex justify-between items-start mb-12 gap-6">
+          <div>
+            <button onClick={onClose} className="flex items-center gap-2 text-lilac-deep mb-6 text-sm font-semibold">
+              <ChevronLeft size={18} /> Back to site
+            </button>
+            <p className="eyebrow mb-3">Dashboard</p>
+            <h2 className="font-serif text-5xl text-plum">Appointments</h2>
           </div>
-
-          {error && (
-            <div className="mb-8 p-6 bg-red-50 border border-red-100 rounded-3xl text-red-600 font-medium text-center">
-              {error}
-            </div>
-          )}
-
-          {isAdminUser ? (
-            <div className="grid gap-6">
-              {appointments.length === 0 ? (
-                <div className="text-center py-20 bg-mist rounded-[40px] border-2 border-dashed border-lavender-200">
-                  <Calendar className="mx-auto text-lavender-300 mb-4" size={48} />
-                  <p className="text-gray-400 italic">No bookings found yet.</p>
-                </div>
-              ) : (
-                appointments.map((app) => (
-                  <motion.div 
-                    layout
-                    key={app.id}
-                    className="bg-mist p-8 rounded-[32px] border border-lavender-100 flex flex-col md:flex-row justify-between items-center gap-8 group hover:shadow-xl transition-all"
-                  >
-                    <div className="flex-grow">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h4 className="text-xl font-bold text-purple-deep">{app.name}</h4>
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                          app.status === 'confirmed' ? 'bg-green-100 text-green-600' : 
-                          app.status === 'cancelled' ? 'bg-red-100 text-red-600' : 
-                          'bg-yellow-100 text-yellow-600'
-                        }`}>
-                          {app.status}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-500 font-medium mb-1">Service: <span className="text-purple-deep">{app.service}</span></p>
-                      <p className="text-sm text-gray-500 font-medium">Contact: <a href={`tel:${app.phone}`} className="text-lavender-600 hover:underline">{app.phone}</a></p>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      {app.status === 'pending' && (
-                        <button 
-                          onClick={() => updateStatus(app.id, 'confirmed')}
-                          className="bg-green-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-green-600 transition-colors shadow-sm"
-                        >
-                          Confirm
-                        </button>
-                      )}
-                      <button 
-                        onClick={() => updateStatus(app.id, 'cancelled')}
-                        className="bg-white text-gray-400 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors border border-lavender-100 shadow-sm"
-                      >
-                        Cancel
-                      </button>
-                      <button 
-                        onClick={() => deleteBooking(app.id)}
-                        className="p-2.5 text-gray-300 hover:text-red-500 transition-colors"
-                        title="Delete Permanently"
-                      >
-                        <Trash2 size={20} />
-                      </button>
-                    </div>
-                  </motion.div>
-                ))
-              )}
+          {user ? (
+            <div className="flex items-center gap-4 bg-paper p-3 border border-line">
+              <div className="text-right hidden sm:block">
+                <p className="text-sm font-semibold text-plum">{user.displayName}</p>
+                <p className="text-[11px] text-muted">{user.email}</p>
+              </div>
+              <button onClick={handleLogout} className="p-3 bg-ivory text-red-600 hover:bg-red-50" title="Log out">
+                <LogOut size={18} />
+              </button>
             </div>
           ) : (
-            <div className="text-center py-20 bg-mist rounded-[40px] border border-lavender-100">
-              <p className="text-gray-400 italic">Please log in with the admin account to view appointments.</p>
-            </div>
+            <button onClick={handleLogin} className="btn-primary">
+              <Lock size={16} /> Log in
+            </button>
           )}
         </div>
-      </motion.div>
-    </AnimatePresence>
-  );
-};
 
-const SpecialistsSection = () => {
-  return (
-    <section id="specialists" className="py-24 bg-mist">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="text-center mb-16">
-          <span className="text-xs font-bold uppercase tracking-[0.3em] text-lavender-600 mb-4 block">Expertise</span>
-          <h2 className="text-4xl font-bold tracking-tight text-purple-deep mb-4">Our Specializations</h2>
-          <p className="text-gray-400 text-lg font-light italic">Artistry backed by scientific precision and decades of experience.</p>
-        </div>
+        {error && <div className="mb-8 p-5 bg-red-50 border border-red-100 text-red-700 text-center">{error}</div>}
 
-        <div className="grid md:grid-cols-3 gap-8">
-          {SPECIALISTS.map((spec, idx) => (
-            <motion.div 
-              key={spec.title}
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: idx * 0.1 }}
-              className="group bg-white rounded-[40px] p-10 shadow-sm hover:shadow-2xl transition-all duration-500 border border-lavender-100 flex flex-col items-center text-center"
-            >
-              <div className="w-24 h-24 rounded-3xl bg-lavender-50 flex items-center justify-center text-lavender-600 mb-8 group-hover:bg-purple-deep group-hover:text-white transition-all duration-500">
-                <spec.icon size={48} />
+        {isAdminUser ? (
+          <div className="grid gap-4">
+            {appointments.length === 0 ? (
+              <div className="text-center py-20 bg-paper border border-dashed border-lavender-300">
+                <Calendar className="mx-auto text-lilac mb-4" size={40} />
+                <p className="text-muted">No bookings yet.</p>
               </div>
-              <div className="px-4">
-                <h4 className="text-2xl font-bold text-purple-deep mb-3 uppercase tracking-tight">{spec.title}</h4>
-                <p className="text-gray-500 font-light text-sm leading-relaxed italic">{spec.description}</p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+            ) : (
+              appointments.map((app) => (
+                <div key={app.id} className="bg-paper p-6 border border-line flex flex-col md:flex-row justify-between md:items-center gap-6">
+                  <div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <h4 className="text-lg font-semibold text-plum">{app.name}</h4>
+                      <span
+                        className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest ${
+                          app.status === 'confirmed' ? 'bg-green-100 text-green-700' : app.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                        }`}
+                      >
+                        {app.status}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted">Service: <span className="text-plum">{app.service}</span></p>
+                    <p className="text-sm text-muted">
+                      Contact: <a href={`tel:${app.phone}`} className="text-lilac-deep underline">{app.phone}</a>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {app.status === 'pending' && (
+                      <button onClick={() => updateStatus(app.id, 'confirmed')} className="bg-green-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-green-700">
+                        Confirm
+                      </button>
+                    )}
+                    <button onClick={() => updateStatus(app.id, 'cancelled')} className="bg-ivory text-muted px-5 py-2.5 text-sm font-semibold border border-line hover:text-plum">
+                      Cancel
+                    </button>
+                    <button onClick={() => deleteBooking(app.id)} className="p-2.5 text-plum/30 hover:text-red-600" title="Delete permanently">
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-20 bg-paper border border-line">
+            <p className="text-muted">Please log in with the admin account to view appointments.</p>
+          </div>
+        )}
       </div>
-    </section>
+    </div>
   );
 };
 
-const WhatsAppFloatingButton = () => {
-  return (
-    <motion.a
-      href="https://wa.me/916238570877"
-      target="_blank"
-      initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      whileHover={{ scale: 1.1 }}
-      whileTap={{ scale: 0.9 }}
-      className="fixed bottom-8 right-8 z-[90] w-16 h-16 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-2xl hover:shadow-[#25D366]/40 transition-shadow"
-    >
-      <div className="absolute -top-1 -right-1 flex h-4 w-4">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-        <span className="relative inline-flex rounded-full h-4 w-4 bg-green-500 border-2 border-white"></span>
-      </div>
-      <Phone size={32} />
-    </motion.a>
-  );
-};
-
-const LegalOverlay = ({ isOpen, onClose, type }: { isOpen: boolean, onClose: () => void, type: 'privacy' | 'terms' }) => {
+const LegalOverlay = ({ isOpen, onClose, type }: { isOpen: boolean; onClose: () => void; type: 'privacy' | 'terms' }) => {
   if (!isOpen) return null;
 
-  const content = type === 'privacy' ? {
-    title: "Privacy Policy",
-    sections: [
-      {
-        title: "Information Collection",
-        text: "We collect only the most essential information needed to provide our services. This includes your name and phone number when you request a booking."
-      },
-      {
-        title: "How We Use Your Data",
-        text: "Your contact details are used exclusively for scheduling and confirming your appointments at ABCD Beauty Clinic. We do not sell or trade your data with any third parties."
-      },
-      {
-        title: "Security",
-        text: "We implement industry-standard security measures to protect your personal information from unauthorized access or disclosure."
-      }
-    ]
-  } : {
-    title: "Terms of Service",
-    sections: [
-      {
-        title: "Booking Policy",
-        text: "Appointments are subject to availability. We recommend booking in advance to secure your preferred time slot."
-      },
-      {
-        title: "Cancellation Policy",
-        text: "We value your time and ours. If you need to cancel or reschedule, please inform us at least 2 hours before your appointment to avoid potential service fees."
-      },
-      {
-        title: "Health & Safety",
-        text: "Please inform us of any medical conditions or allergies prior to your treatment. ABCD Beauty Clinic is not liable for reactions if information was withheld."
-      }
-    ]
-  };
+  const content =
+    type === 'privacy'
+      ? {
+          title: 'Privacy Policy',
+          sections: [
+            { title: 'Information Collection', text: 'We collect only the information needed to provide our services: your name and phone number when you request a booking.' },
+            { title: 'How We Use Your Data', text: 'Your contact details are used only to schedule and confirm your appointments at ABCD Beauty Clinic. We do not sell or trade your data with third parties.' },
+            { title: 'Security', text: 'We use industry-standard measures to protect your personal information from unauthorized access or disclosure.' },
+          ],
+        }
+      : {
+          title: 'Terms of Service',
+          sections: [
+            { title: 'Booking Policy', text: 'Appointments are subject to availability. We recommend booking in advance to secure your preferred time.' },
+            { title: 'Cancellation Policy', text: 'If you need to cancel or reschedule, please let us know at least 2 hours before your appointment.' },
+            { title: 'Health & Safety', text: 'Please tell us about any medical conditions or allergies before your treatment. ABCD Beauty Clinic is not liable for reactions if this information was withheld.' },
+          ],
+        };
 
   return (
-    <AnimatePresence>
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[110] bg-white/95 backdrop-blur-xl overflow-y-auto"
-      >
-        <div className="max-w-3xl mx-auto px-6 py-24">
-          <button 
-            onClick={onClose}
-            className="flex items-center gap-2 text-lavender-600 mb-12 font-bold hover:translate-x-[-4px] transition-transform"
-          >
-            <ChevronLeft size={20} />
-            Close
-          </button>
-
-          <h2 className="text-5xl font-bold text-purple-deep mb-16 tracking-tight">{content.title}</h2>
-          
-          <div className="space-y-16">
-            {content.sections.map((section, idx) => (
-              <div key={idx}>
-                <h3 className="text-xl font-bold text-purple-ink mb-4">{section.title}</h3>
-                <p className="text-gray-500 leading-relaxed text-lg font-light">
-                  {section.text}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-24 pt-12 border-t border-gray-100 italic text-gray-400 text-sm">
-            Last updated: April 2026. ABCD Beauty Clinic Reserve all rights.
-          </div>
+    <div className="fixed inset-0 z-[110] bg-ivory overflow-y-auto">
+      <div className="max-w-3xl mx-auto px-6 py-24">
+        <button onClick={onClose} className="flex items-center gap-2 text-lilac-deep mb-12 text-sm font-semibold">
+          <ChevronLeft size={18} /> Close
+        </button>
+        <h2 className="font-serif text-6xl text-plum mb-14">{content.title}</h2>
+        <div className="space-y-12">
+          {content.sections.map((s) => (
+            <div key={s.title}>
+              <h3 className="text-lg font-semibold text-plum mb-3">{s.title}</h3>
+              <p className="text-muted leading-relaxed">{s.text}</p>
+            </div>
+          ))}
         </div>
-      </motion.div>
-    </AnimatePresence>
+        <p className="mt-20 pt-10 border-t border-line text-sm text-muted">Last updated: April 2026.</p>
+      </div>
+    </div>
   );
 };
 
 export default function App() {
   const [adminOpen, setAdminOpen] = useState(false);
-  const [legalOpen, setLegalOpen] = useState<{ open: boolean, type: 'privacy' | 'terms' }>({ open: false, type: 'privacy' });
+  const [legal, setLegal] = useState<{ open: boolean; type: 'privacy' | 'terms' }>({ open: false, type: 'privacy' });
 
   return (
-    <div className="selection:bg-lavender-100 selection:text-lavender-900">
+    <div>
       <Navbar />
       <main>
         <Hero />
-        
-        {/* About Section - Brief Intro */}
-        <section id="about" className="py-32 bg-white flex items-center justify-center">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <motion.h2 
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              className="text-4xl md:text-6xl font-bold italic tracking-tight mb-12"
-            >
-              "Where expertise <span className="text-gray-300">meets</span> warmth."
-            </motion.h2>
-            <p className="text-xl md:text-2xl text-gray-500 font-light leading-relaxed italic">
-              Since 2018, ABCD Beauty Clinic has been a sanctuary for beauty enthusiasts in Kanhangad & Cherkala. Founded on the principles of <span className="text-black font-medium">hygiene, precision, and hospitality</span>.
-            </p>
-          </div>
-        </section>
-
-        <ServicesSection />
-        <SpecialistsSection />
-        <TestimonialsMarquee />
-        <BookingSection />
-        <FindUs />
-
-        {/* Instagram CTA Section */}
-        <section className="py-20 bg-mist border-t border-lavender-100">
-          <div className="max-w-7xl mx-auto px-6 text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="flex flex-col items-center gap-8"
-            >
-              <div className="flex -space-x-4 mb-2">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="w-12 h-12 rounded-full border-2 border-white overflow-hidden shadow-md">
-                    <img 
-                      src={`https://images.unsplash.com/photo-${i === 1 ? '1494790108377-be9c29b29330' : i === 2 ? '1507003211169-0a1dd7228f2d' : i === 3 ? '1534528741775-53994a69daeb' : '1500648767791-00dcc994a43e'}?w=200&h=200&fit=crop`} 
-                      alt="Reviewer" 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ))}
-                <div className="w-12 h-12 rounded-full border-2 border-white bg-lavender-50 flex items-center justify-center text-[10px] font-bold text-lavender-600 shadow-md">
-                  +1k
-                </div>
-              </div>
-              <div>
-                <h3 className="text-3xl font-bold text-purple-deep mb-2">Join our community</h3>
-                <p className="text-gray-500 italic">Get daily beauty tips and behind-the-scenes magic.</p>
-              </div>
-              <a 
-                href="https://www.instagram.com/abcdbeautyclinic?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="bg-white text-purple-deep border border-lavender-200 px-10 py-5 rounded-full font-bold text-lg hover:shadow-xl transition-all flex items-center gap-3 group"
-              >
-                <Instagram size={24} className="text-lavender-500 group-hover:scale-110 transition-transform" />
-                Find Us on Instagram
-              </a>
-            </motion.div>
-          </div>
-        </section>
+        <Ticker />
+        <About />
+        <Services />
+        <Specialists />
+        <Clinic />
+        <Reviews />
+        <Booking />
+        <Visit />
+        <InstagramBand />
       </main>
-      <Footer 
-        onOpenAdmin={() => setAdminOpen(true)} 
-        onOpenPrivacy={() => setLegalOpen({ open: true, type: 'privacy' })}
-        onOpenTerms={() => setLegalOpen({ open: true, type: 'terms' })}
+      <Footer
+        onOpenAdmin={() => setAdminOpen(true)}
+        onOpenPrivacy={() => setLegal({ open: true, type: 'privacy' })}
+        onOpenTerms={() => setLegal({ open: true, type: 'terms' })}
       />
       <AdminSection isOpen={adminOpen} onClose={() => setAdminOpen(false)} />
-      <LegalOverlay 
-        isOpen={legalOpen.open} 
-        onClose={() => setLegalOpen({ ...legalOpen, open: false })} 
-        type={legalOpen.type} 
-      />
+      <LegalOverlay isOpen={legal.open} onClose={() => setLegal({ ...legal, open: false })} type={legal.type} />
       <WhatsAppFloatingButton />
     </div>
   );
 }
-
