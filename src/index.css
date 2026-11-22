@@ -5,7 +5,7 @@
   --font-sans: "Manrope", "Helvetica Neue", Arial, sans-serif;
   --font-serif: "Instrument Serif", Georgia, serif;
 
-  /* Brand — taken from the ABCD logo lavender (#B39CCB) */
+  /* Brand — derived from the ABCD logo lavender (#B39CCB) */
   --color-ivory: #FBF8F5;
   --color-paper: #F4EFF6;
   --color-line: #E7DFEB;
@@ -17,59 +17,77 @@
   --color-brass: #B08D57;
   --color-muted: #6E6276;
 
-  /* Legacy tokens kept for the admin panel + legal pages */
+  /* Radius scale */
+  --radius-card: 1.75rem;
+  --radius-media: 1.5rem;
+  --radius-field: 1rem;
+
+  /* Soft, layered shadows */
+  --shadow-soft: 0 1px 2px rgba(42, 27, 51, 0.04), 0 8px 24px -12px rgba(42, 27, 51, 0.12);
+  --shadow-lift: 0 2px 4px rgba(42, 27, 51, 0.04), 0 24px 48px -20px rgba(42, 27, 51, 0.28);
+
+  /* Legacy tokens kept for older markup */
   --color-mist: #F4EFF6;
-  --color-lavender-50: #F6F1FA;
-  --color-lavender-100: #E9E0F1;
-  --color-lavender-200: #D9CBE6;
   --color-lavender-300: #C3AFD8;
-  --color-lavender-400: #B39CCB;
-  --color-lavender-500: #9479B8;
-  --color-lavender-600: #7D60A2;
-  --color-lavender-700: #644886;
-  --color-lavender-900: #3A2650;
-  --color-purple-deep: #2A1B33;
-  --color-purple-darker: #1E1326;
-  --color-purple-ink: #170E1D;
 }
 
 @layer base {
-  html { scroll-behavior: smooth; scroll-padding-top: 88px; }
-  body {
-    @apply bg-ivory text-plum antialiased;
-  }
+  html { scroll-behavior: smooth; scroll-padding-top: 96px; -webkit-tap-highlight-color: transparent; }
+  body { @apply bg-ivory text-plum antialiased; text-rendering: optimizeLegibility; }
   ::selection { background: #E9E0F1; color: #2A1B33; }
+  :focus-visible { outline: 2px solid #7D60A2; outline-offset: 3px; border-radius: 12px; }
+  img { -webkit-user-drag: none; }
 }
 
+@layer components {
 /* Arch-topped frames — echo the arched niches inside the clinic */
-.arch { border-radius: 999px 999px 6px 6px; overflow: hidden; }
+.arch { border-radius: 999px 999px var(--radius-media) var(--radius-media); overflow: hidden; }
 
 .eyebrow {
-  @apply text-[11px] font-semibold uppercase tracking-[0.28em] text-lilac-deep;
+  @apply inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-lilac-deep;
 }
+.eyebrow::before { content: ""; width: 18px; height: 1px; background: currentColor; opacity: .6; }
 
-.btn-primary {
-  @apply inline-flex items-center justify-center gap-3 bg-plum text-ivory px-7 py-4 text-sm font-semibold tracking-wide transition-colors hover:bg-lilac-deep;
+.btn {
+  @apply inline-flex items-center justify-center gap-2.5 rounded-full px-7 h-13 text-[14px] font-semibold tracking-[0.01em] transition-all duration-300 select-none active:scale-[0.98];
 }
-.btn-ghost {
-  @apply inline-flex items-center justify-center gap-3 border border-plum/20 text-plum px-7 py-4 text-sm font-semibold tracking-wide transition-colors hover:border-plum hover:bg-plum hover:text-ivory;
-}
+.btn-primary { @apply inline-flex items-center justify-center gap-2.5 rounded-full px-7 h-13 text-[14px] font-semibold tracking-[0.01em] transition-all duration-300 select-none active:scale-[0.98] bg-plum text-ivory shadow-[0_10px_30px_-12px_rgba(42,27,51,0.6)] hover:bg-plum-soft hover:shadow-[0_16px_36px_-12px_rgba(42,27,51,0.55)] hover:-translate-y-0.5; }
+.btn-ghost { @apply inline-flex items-center justify-center gap-2.5 rounded-full px-7 h-13 text-[14px] font-semibold tracking-[0.01em] transition-all duration-300 select-none active:scale-[0.98] border border-plum/15 bg-white/60 text-plum backdrop-blur hover:border-plum/40 hover:bg-white; }
+.btn-light { @apply inline-flex items-center justify-center gap-2.5 rounded-full px-7 h-13 text-[14px] font-semibold tracking-[0.01em] transition-all duration-300 select-none active:scale-[0.98] bg-ivory text-plum hover:bg-white hover:-translate-y-0.5; }
+
+.card { @apply rounded-[var(--radius-card)] bg-white border border-line/80 shadow-[var(--shadow-soft)]; }
 
 .field {
-  @apply w-full bg-transparent border-0 border-b border-plum/20 px-0 py-3 text-base text-plum placeholder:text-plum/35 focus:outline-none focus:border-lilac-deep transition-colors;
+  @apply w-full rounded-[var(--radius-field)] bg-white border border-line px-4 h-13 text-[15px] text-plum placeholder:text-plum/35 transition-all outline-none focus:border-lilac-deep focus:ring-4 focus:ring-lilac/25;
+}
+.chip {
+  @apply inline-flex items-center justify-center rounded-full border border-line bg-white px-4 h-10 text-[13px] font-medium text-plum/80 transition-all cursor-pointer hover:border-plum/30;
+}
+.chip[data-active="true"] { @apply bg-plum text-ivory border-plum; }
 }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
 
-::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar { width: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #D9CBE6; border-radius: 8px; }
+::-webkit-scrollbar-thumb { background: #D9CBE6; border-radius: 10px; border: 3px solid #FBF8F5; }
 
 @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-.animate-marquee { animation: marquee 45s linear infinite; }
+.animate-marquee { animation: marquee 50s linear infinite; }
+
+@keyframes pulse-dot { 0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, .5); } 50% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); } }
+.live-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+/* Subtle grain to keep large flat areas from feeling digital */
+.grain { position: relative; isolation: isolate; }
+.grain::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .35; border-radius: inherit;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.16 0 0 0 0 0.1 0 0 0 0 0.2 0 0 0 .06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-marquee { animation: none; }
+  .animate-marquee, .live-dot { animation: none; }
   html { scroll-behavior: auto; }
+  *, *::before, *::after { transition-duration: 0.01ms !important; }
 }
