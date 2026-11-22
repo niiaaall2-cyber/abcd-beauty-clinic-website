@@ -30,7 +30,7 @@ import {
 import { db, auth, googleProvider } from './lib/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
-import { SERVICES, ServiceCategory } from './data/menu';
+import { SERVICES, ServiceCategory, fromPrice, itemLabel, bookingValue, menuLabel } from './data/menu';
 
 // --- Constants ---
 
@@ -551,18 +551,29 @@ const ServiceDrawer = ({ service, onClose, onBook }: { service: ServiceCategory 
             </div>
 
             <div className="flex-1 overflow-y-auto overscroll-contain px-6 sm:px-8 pb-6 pt-3 space-y-8">
-              {service.groups.map((g) => (
-                <div key={g.name}>
-                  <h4 className="text-[11px] font-semibold uppercase tracking-[0.22em] text-lilac-deep mb-2">{g.name}</h4>
+              {service.groups.map((g, gi) => (
+                <div key={gi}>
+                  {(g.name || g.note) && (
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 mb-2">
+                      {g.name && <h4 className="text-[11px] font-semibold uppercase tracking-[0.22em] text-lilac-deep">{g.name}</h4>}
+                      {g.note && <span className="text-[12px] font-medium text-plum/70 rounded-full bg-lilac-light px-2.5 py-0.5">{g.note}</span>}
+                    </div>
+                  )}
                   <ul className="divide-y divide-line">
-                    {g.items.map((it) => (
-                      <li key={it.name}>
+                    {g.items.map((it, ii) => (
+                      <li key={ii}>
                         <button
-                          onClick={() => onBook(it.name)}
-                          className="group w-full flex items-center gap-3 py-3.5 text-left -mx-3 px-3 rounded-xl hover:bg-paper transition-colors"
+                          onClick={() => onBook(bookingValue(service, g, it))}
+                          className="group w-full flex items-start gap-3 py-3.5 text-left -mx-3 px-3 rounded-xl hover:bg-paper transition-colors"
                         >
-                          <span className="text-[15px] text-plum flex-1">{it.name}</span>
-                          <span className="text-[15px] font-semibold text-plum whitespace-nowrap tabular-nums">{it.price}</span>
+                          <span className="flex-1 min-w-0">
+                            <span className="text-[15px] text-plum">{it.name}</span>
+                            {it.note && <span className="text-[12.5px] text-muted"> {it.note}</span>}
+                            {it.includes && (
+                              <span className="mt-1.5 block text-[13px] leading-relaxed text-muted">{it.includes.join(' · ')}</span>
+                            )}
+                          </span>
+                          {it.price && <span className="text-[15px] font-semibold text-plum whitespace-nowrap tabular-nums">{it.price}</span>}
                           <span className="w-7 h-7 rounded-full bg-plum text-ivory flex items-center justify-center opacity-0 -mr-1 scale-75 group-hover:opacity-100 group-hover:scale-100 transition-all">
                             <ArrowRight size={13} />
                           </span>
@@ -572,7 +583,7 @@ const ServiceDrawer = ({ service, onClose, onBook }: { service: ServiceCategory 
                   </ul>
                 </div>
               ))}
-              <p className="text-xs text-muted rounded-xl bg-paper px-4 py-3">Tap any treatment to book it. Prices are a guide and may vary with hair length and consultation.</p>
+              <p className="text-xs text-muted rounded-xl bg-paper px-4 py-3">Tap any treatment to book it. Prices marked + start from the amount shown.</p>
             </div>
 
             <div className="shrink-0 p-4 border-t border-line grid grid-cols-[1fr_auto] gap-2.5 bg-ivory">
@@ -650,7 +661,7 @@ const Services = ({ onBook }: { onBook: (service: string) => void }) => {
                     <div className={`relative overflow-hidden rounded-[1.35rem] bg-lilac-light aspect-[4/3] ${wide ? 'lg:aspect-[2.4/1]' : ''}`}>
                       <img decoding="async" src={s.image} alt={s.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-[1.4s] ease-out group-hover:scale-[1.06]" />
                       <span className="absolute top-3 left-3 rounded-full bg-white/95 text-plum text-[12px] font-semibold px-3 h-8 inline-flex items-center">
-                        From {s.from}
+                        From {fromPrice(s)}
                       </span>
                     </div>
                     <div className={`px-3.5 pt-4 pb-3 ${wide ? 'lg:px-6' : ''}`}>
@@ -965,11 +976,13 @@ const Booking = ({ preset, onPresetUsed }: { preset: { service: string; n: numbe
                     <select name="service" required value={service} onChange={(e) => setService(e.target.value)} className={`field appearance-none pr-12 cursor-pointer ${service ? '' : 'text-plum/40'}`}>
                       <option value="" disabled>Choose a treatment</option>
                       {SERVICES.map((c) => (
-                        <optgroup key={c.id} label={`${c.title} — ${c.audience === 'her' ? 'Ladies' : 'Men'}`}>
-                          {c.groups.flatMap((g) =>
-                            g.items.map((it) => (
-                              <option key={`${c.id}-${g.name}-${it.name}`} value={it.name} className="text-plum">
-                                {it.name} · {it.price}
+                        <optgroup key={c.id} label={`${menuLabel(c)} — ${c.title}`}>
+                          {c.groups.flatMap((g, gi) =>
+                            g.items.map((it, ii) => (
+                              <option key={`${c.id}-${gi}-${ii}`} value={bookingValue(c, g, it)} className="text-plum">
+                                {itemLabel(it)}
+                                {g.name && g.name !== it.name ? ` — ${g.name}` : ''}
+                                {it.price ? ` · ${it.price}` : g.note ? ` · ${g.note}` : ''}
                               </option>
                             )),
                           )}
